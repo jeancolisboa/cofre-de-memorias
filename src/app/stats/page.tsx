@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 import { createClient } from '@/lib/supabase/client';
 import type { Mood } from '@/types';
 
@@ -14,6 +15,13 @@ interface Stats {
   topTags: { tag: string; count: number }[];
   topPeople: { name: string; count: number }[];
 }
+
+const ACCENT_COLORS = [
+  'var(--accent-purple)',
+  'var(--accent-pink)',
+  'var(--accent-teal)',
+  'var(--accent-amber)',
+];
 
 export default function StatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -71,96 +79,151 @@ export default function StatsPage() {
     load();
   }, [supabase]);
 
+  const summaryCards = stats ? [
+    { label: 'Total', value: stats.total, color: 'var(--accent-purple)' },
+    { label: 'Este mês', value: stats.thisMonth, color: 'var(--accent-teal)' },
+    { label: 'Sequência', value: `${stats.streak}🔥`, color: 'var(--accent-amber)' },
+    { label: 'Mood top', value: stats.topMood ?? '—', color: 'var(--accent-pink)' },
+  ] : [];
+
   return (
-    <main className="min-h-screen bg-[#F9F8F6] dark:bg-[#0D0D14]">
-      <header className="px-4 pt-14 pb-4">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Estatísticas</h1>
-      </header>
+    <div className="flex" style={{ background: 'var(--bg-base)' }}>
+      <Sidebar />
 
-      <div className="px-4 pb-28 space-y-4">
-        {loading && (
-          <div className="flex justify-center pt-10">
-            <div className="w-5 h-5 rounded-full border-2 border-violet-300 dark:border-violet-800 border-t-violet-600 animate-spin" />
-          </div>
-        )}
+      <main className="flex-1 lg:ml-[220px]">
+        <header
+          className="px-4 lg:px-8 pt-14 lg:pt-8 pb-4 sticky top-0 z-30"
+          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
+        >
+          <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
+            Estatísticas
+          </h1>
+        </header>
 
-        {stats && (
-          <>
-            {/* Summary */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Total', value: stats.total, color: 'text-violet-600 dark:text-violet-400' },
-                { label: 'Este mês', value: stats.thisMonth, color: 'text-violet-600 dark:text-violet-400' },
-                { label: 'Sequência', value: `${stats.streak}🔥`, color: 'text-amber-500' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-white dark:bg-[#161622] rounded-2xl p-4 text-center border border-gray-100 dark:border-white/8 shadow-sm shadow-gray-50 dark:shadow-none">
-                  <p className={`text-2xl font-bold ${color}`}>{value}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">{label}</p>
-                </div>
-              ))}
+        <div className="px-4 lg:px-8 pb-28 pt-6" style={{ maxWidth: '1100px' }}>
+          {loading && (
+            <div className="flex justify-center pt-10">
+              <div
+                className="w-5 h-5 rounded-full border-2 animate-spin"
+                style={{ borderColor: 'var(--accent-purple)', borderTopColor: 'transparent' }}
+              />
             </div>
+          )}
 
-            {/* Mood chart */}
-            {Object.keys(stats.moodCounts).length > 0 && (
-              <div className="bg-white dark:bg-[#161622] rounded-2xl p-4 border border-gray-100 dark:border-white/8 shadow-sm shadow-gray-50 dark:shadow-none">
-                <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-3">Mood dominante</p>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-4xl">{stats.topMood}</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Mood mais frequente</p>
-                    <p className="text-xs text-gray-400">{stats.topMood ? stats.moodCounts[stats.topMood] : 0} vezes</p>
+          {stats && (
+            <>
+              {/* Summary — 2×2 mobile, 4×1 desktop */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                {summaryCards.map(({ label, value, color }) => (
+                  <div
+                    key={label}
+                    className="rounded-[14px] p-4 text-center"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                  >
+                    <p style={{ fontSize: '28px', fontWeight: 500, color }}>{value}</p>
+                    <p className="meta-label mt-1">{label}</p>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  {Object.entries(stats.moodCounts).sort((a, b) => b[1] - a[1]).map(([mood, count]) => (
-                    <div key={mood} className="flex items-center gap-2">
-                      <span className="text-lg w-7 leading-none">{mood}</span>
-                      <div className="flex-1 bg-gray-100 dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="h-full bg-violet-500 rounded-full"
-                          style={{ width: `${(count / (stats.total || 1)) * 100}%` }}
-                        />
+                ))}
+              </div>
+
+              {/* Two-column layout on desktop */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+                {/* Left column: mood distribution */}
+                <div className="flex-1 min-w-0 space-y-4">
+                  {Object.keys(stats.moodCounts).length > 0 && (
+                    <div
+                      className="rounded-[14px] p-4"
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                    >
+                      <p className="meta-label mb-4">Distribuição de mood</p>
+                      <div className="space-y-3">
+                        {Object.entries(stats.moodCounts).sort((a, b) => b[1] - a[1]).map(([mood, count]) => {
+                          const pct = Math.round((count / (stats.total || 1)) * 100);
+                          return (
+                            <div key={mood} className="flex items-center gap-3">
+                              <span className="text-base w-6 flex-shrink-0">{mood}</span>
+                              <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: 'var(--border)' }}>
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${pct}%`, background: 'var(--accent-purple)' }}
+                                />
+                              </div>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '28px', textAlign: 'right' }}>
+                                {pct}%
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <span className="text-xs text-gray-400 w-4 text-right">{count}</span>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
 
-            {/* Tags */}
-            {stats.topTags.length > 0 && (
-              <div className="bg-white dark:bg-[#161622] rounded-2xl p-4 border border-gray-100 dark:border-white/8 shadow-sm shadow-gray-50 dark:shadow-none">
-                <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-3">Tags mais usadas</p>
-                <div className="flex flex-wrap gap-2">
-                  {stats.topTags.map(({ tag, count }) => (
-                    <span key={tag} className="tag-chip text-sm px-3 py-1">
-                      #{tag} <span className="opacity-50 ml-1">{count}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* People */}
-            {stats.topPeople.length > 0 && (
-              <div className="bg-white dark:bg-[#161622] rounded-2xl p-4 border border-gray-100 dark:border-white/8 shadow-sm shadow-gray-50 dark:shadow-none">
-                <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-3">Pessoas mais mencionadas</p>
-                <div className="space-y-2.5">
-                  {stats.topPeople.map(({ name, count }) => (
-                    <div key={name} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">@{name}</span>
-                      <span className="text-xs text-gray-400 bg-gray-100 dark:bg-white/8 px-2 py-0.5 rounded-full">{count}×</span>
+                {/* Right column: tags + people */}
+                <div className="w-full lg:w-[360px] flex-shrink-0 space-y-4">
+                  {stats.topPeople.length > 0 && (
+                    <div
+                      className="rounded-[14px] p-4"
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                    >
+                      <p className="meta-label mb-3">Pessoas mais mencionadas</p>
+                      <div className="space-y-0">
+                        {stats.topPeople.map(({ name, count }, i) => (
+                          <div key={name}>
+                            <div className="flex items-center justify-between py-2.5">
+                              <div className="flex items-center gap-3">
+                                <span style={{ fontSize: '11px', fontWeight: 500, color: ACCENT_COLORS[i % ACCENT_COLORS.length], width: '16px' }}>
+                                  {i + 1}
+                                </span>
+                                <span
+                                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                                  style={{ background: 'color-mix(in srgb, var(--accent-purple) 15%, transparent)', color: 'var(--accent-purple)' }}
+                                >
+                                  {name[0]?.toUpperCase()}
+                                </span>
+                                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>@{name}</span>
+                              </div>
+                              <span
+                                className="px-2 py-0.5 rounded-full"
+                                style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--border)' }}
+                              >
+                                {count}×
+                              </span>
+                            </div>
+                            {i < stats.topPeople.length - 1 && (
+                              <div style={{ height: '0.5px', background: 'var(--border)' }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {stats.topTags.length > 0 && (
+                    <div
+                      className="rounded-[14px] p-4"
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                    >
+                      <p className="meta-label mb-3">Tags mais usadas</p>
+                      <div className="flex flex-wrap gap-2">
+                        {stats.topTags.map(({ tag, count }) => (
+                          <span key={tag} className="tag-chip px-3 py-1 text-sm">
+                            #{tag} <span style={{ opacity: 0.5, marginLeft: '4px' }}>{count}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
 
-      <BottomNav />
-    </main>
+        <div className="h-24 lg:h-8" />
+        <BottomNav />
+      </main>
+    </div>
   );
 }

@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className="bg-[#F9F8F6] dark:bg-[#0D0D14] text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+      <body className="min-h-screen" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

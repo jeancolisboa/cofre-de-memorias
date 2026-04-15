@@ -17,27 +17,40 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-[#F9F8F6] dark:bg-[#0D0D14] px-6">
+    <main
+      className="min-h-screen flex flex-col items-center justify-center px-6"
+      style={{ background: 'var(--bg-base)' }}
+    >
       <div className="mb-10 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-white dark:bg-[#161622] border border-gray-100 dark:border-white/10 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-gray-100 dark:shadow-violet-950/30">
+        <div
+          className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6"
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        >
           <span className="text-4xl">🔒</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+        <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
           Cofre de Memórias
         </h1>
-        <p className="text-gray-400 mt-2 text-sm max-w-xs mx-auto leading-relaxed">
+        <p className="mt-2 max-w-xs mx-auto" style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
           Guarde, reviva e preserve os momentos que importam.
         </p>
       </div>
 
-      <div className="w-full max-w-sm bg-white dark:bg-[#161622] border border-gray-100 dark:border-white/10 rounded-3xl p-6 shadow-xl shadow-gray-100/80 dark:shadow-none">
+      <div
+        className="w-full max-w-sm rounded-3xl p-6"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      >
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold py-3.5 px-6 rounded-2xl hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-[0.98] transition-all disabled:opacity-60"
+          className="w-full flex items-center justify-center gap-3 py-3.5 px-6 rounded-2xl font-medium disabled:opacity-60 active:scale-[0.98]"
+          style={{ background: 'var(--text-primary)', color: 'var(--bg-base)', fontSize: '14px' }}
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-white/40 dark:border-gray-400 border-t-white dark:border-t-gray-800 rounded-full animate-spin" />
+            <div
+              className="w-5 h-5 border-2 rounded-full animate-spin"
+              style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }}
+            />
           ) : (
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -49,12 +62,12 @@ export default function LoginPage() {
           {loading ? 'Entrando…' : 'Continuar com Google'}
         </button>
 
-        <p className="text-center text-gray-400 text-xs mt-4">
+        <p className="text-center mt-4" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           🔒 Suas memórias ficam seguras e privadas
         </p>
       </div>
 
-      <p className="text-gray-300 dark:text-gray-600 text-xs mt-8">
+      <p className="mt-8" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
         Ao entrar, você concorda com os termos de uso.
       </p>
     </main>

@@ -6,6 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import Calendar from '@/components/Calendar';
 import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 import MemoryModal from '@/components/MemoryModal';
 import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
@@ -122,132 +123,211 @@ export default function HomePage() {
     Array.from(memoriesMap.entries()).filter(([, m]) => m.is_pinned).map(([d]) => d)
   );
 
+  const sortedMemories = Array.from(memoriesMap.entries()).sort(([a], [b]) => b.localeCompare(a));
+
   return (
-    <main className="flex flex-col min-h-screen bg-[#F9F8F6] dark:bg-[#0D0D14]">
-      {/* Header */}
-      <header className="px-4 pt-14 pb-3 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">Cofre de Memórias</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {format(currentMonth, 'MMMM yyyy', { locale: ptBR })} · {memoriesMap.size} {memoriesMap.size === 1 ? 'memória' : 'memórias'}
+    <div className="flex" style={{ background: 'var(--bg-base)' }}>
+      <Sidebar />
+
+      {/* Main — natural height, body scrolls */}
+      <main className="flex-1 lg:ml-[220px]">
+        {/* Header */}
+        <header
+          className="px-4 lg:px-8 pt-14 lg:pt-8 pb-3 flex items-center justify-between sticky top-0 z-30"
+          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
+        >
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
+              Cofre de Memórias
+            </h1>
+            <p className="meta-label mt-1 capitalize">
+              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })} · {memoriesMap.size} {memoriesMap.size === 1 ? 'memória' : 'memórias'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 relative">
+            {/* Theme toggle — mobile only */}
+            <button
+              onClick={toggle}
+              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-full"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            >
+              {theme === 'dark' ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4" />
+                  <path strokeLinecap="round" d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+
+            {/* Avatar / menu — mobile only (desktop handled in sidebar) */}
+            <div className="relative lg:hidden">
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="w-9 h-9 flex items-center justify-center rounded-full"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="4" />
+                  <path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div
+                    className="absolute right-0 top-11 z-20 w-40 rounded-2xl py-1 overflow-hidden"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                  >
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2"
+                      style={{ color: '#EF4444' }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sair
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Content — two columns on desktop */}
+        <div className="px-4 lg:px-8 py-6">
+          <div className="flex gap-6 items-start">
+
+            {/* Left column: calendar (natural width, max 560px) */}
+            <div className="flex-1 min-w-0" style={{ maxWidth: '560px' }}>
+              <div
+                className="rounded-[14px] p-4"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+              >
+                <Calendar
+                  currentMonth={currentMonth}
+                  memoriesDates={memoriesDates}
+                  pinnedDates={pinnedDates}
+                  onMonthChange={setCurrentMonth}
+                  onDayPress={handleDayPress}
+                  memoryCount={memoriesMap.size}
+                />
+              </div>
+
+              {/* Mobile-only: memories below calendar */}
+              {memoriesMap.size > 0 && (
+                <div className="lg:hidden mt-6">
+                  <p className="meta-label mb-3">Memórias recentes</p>
+                  <div className="space-y-2">
+                    {sortedMemories.slice(0, 5).map(([dateKey, memory]) => (
+                      <MemoryCard
+                        key={dateKey}
+                        dateKey={dateKey}
+                        memory={memory}
+                        onClick={() => {
+                          setSelectedDate(new Date(dateKey + 'T12:00:00'));
+                          setSelectedMemory(memory);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {loading && (
+                <div className="flex items-center justify-center pt-10">
+                  <div
+                    className="w-5 h-5 rounded-full border-2 animate-spin"
+                    style={{ borderColor: 'var(--accent-purple)', borderTopColor: 'transparent' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Right column: memories — desktop only, sticky */}
+            <div
+              className="hidden lg:block flex-shrink-0 sticky top-[88px]"
+              style={{ width: '320px' }}
+            >
+              <p className="meta-label mb-3">Memórias recentes</p>
+              {loading && (
+                <div className="flex items-center justify-center pt-6">
+                  <div
+                    className="w-5 h-5 rounded-full border-2 animate-spin"
+                    style={{ borderColor: 'var(--accent-purple)', borderTopColor: 'transparent' }}
+                  />
+                </div>
+              )}
+              {!loading && memoriesMap.size === 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  Nenhuma memória este mês.
+                </p>
+              )}
+              <div
+                className="space-y-2 overflow-y-auto"
+                style={{ maxHeight: 'calc(100vh - 120px)' }}
+              >
+                {sortedMemories.map(([dateKey, memory]) => (
+                  <MemoryCard
+                    key={dateKey}
+                    dateKey={dateKey}
+                    memory={memory}
+                    onClick={() => {
+                      setSelectedDate(new Date(dateKey + 'T12:00:00'));
+                      setSelectedMemory(memory);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {selectedDate && selectedMemory !== undefined && (
+          <MemoryModal
+            date={selectedDate}
+            memory={selectedMemory}
+            onClose={() => { setSelectedDate(null); setSelectedMemory(undefined); }}
+            onSave={handleSave}
+            onDelete={selectedMemory ? handleDelete : undefined}
+          />
+        )}
+
+        <div className="h-24 lg:h-8" />
+        <BottomNav />
+      </main>
+    </div>
+  );
+}
+
+function MemoryCard({ dateKey, memory, onClick }: { dateKey: string; memory: Memory; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-[14px] px-4 py-3 active:scale-[0.98]"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-lg flex-shrink-0 mt-0.5">{memory.mood ?? '📝'}</span>
+        <div className="flex-1 min-w-0">
+          <p className="line-clamp-2 leading-relaxed" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            {memory.text}
+          </p>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
+            {memory.is_pinned && ' · ⭐'}
+            {memory.location && ` · ${memory.location}`}
           </p>
         </div>
-
-        <div className="flex items-center gap-2 relative">
-          {/* Theme toggle */}
-          <button
-            onClick={toggle}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
-            {theme === 'dark' ? (
-              <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="4" />
-                <path strokeLinecap="round" d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-          </button>
-
-          {/* Avatar / menu */}
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
-            >
-              <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <circle cx="12" cy="8" r="4" />
-                <path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-              </svg>
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-11 z-20 w-40 bg-white dark:bg-[#1E1E2C] border border-gray-100 dark:border-white/10 rounded-2xl shadow-xl py-1 overflow-hidden">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sair
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Calendar card */}
-      <div className="mx-4 bg-white dark:bg-[#161622] rounded-3xl p-4 shadow-sm shadow-gray-100 dark:shadow-none border border-gray-100 dark:border-white/8">
-        <Calendar
-          currentMonth={currentMonth}
-          memoriesDates={memoriesDates}
-          pinnedDates={pinnedDates}
-          onMonthChange={setCurrentMonth}
-          onDayPress={handleDayPress}
-        />
       </div>
-
-      {/* Recent memories */}
-      {memoriesMap.size > 0 && (
-        <div className="mt-5 px-4">
-          <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-3">Recentes</p>
-          <div className="space-y-2">
-            {Array.from(memoriesMap.entries())
-              .sort(([a], [b]) => b.localeCompare(a))
-              .slice(0, 3)
-              .map(([dateKey, memory]) => (
-                <button
-                  key={dateKey}
-                  onClick={() => {
-                    setSelectedDate(new Date(dateKey + 'T12:00:00'));
-                    setSelectedMemory(memory);
-                  }}
-                  className="w-full text-left bg-white dark:bg-[#161622] rounded-2xl px-4 py-3.5 border border-gray-100 dark:border-white/8 active:scale-[0.98] transition-transform shadow-sm shadow-gray-50 dark:shadow-none"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl flex-shrink-0 mt-0.5">{memory.mood ?? '📝'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 leading-relaxed">
-                        {memory.text}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
-                        {memory.is_pinned && ' · ⭐'}
-                        {memory.location && ` · ${memory.location}`}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-5 h-5 rounded-full border-2 border-violet-300 dark:border-violet-800 border-t-violet-600 animate-spin" />
-        </div>
-      )}
-
-      {selectedDate && selectedMemory !== undefined && (
-        <MemoryModal
-          date={selectedDate}
-          memory={selectedMemory}
-          onClose={() => { setSelectedDate(null); setSelectedMemory(undefined); }}
-          onSave={handleSave}
-          onDelete={selectedMemory ? handleDelete : undefined}
-        />
-      )}
-
-      <div className="h-24" />
-      <BottomNav />
-    </main>
+    </button>
   );
 }

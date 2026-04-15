@@ -21,6 +21,7 @@ interface CalendarProps {
   pinnedDates?: Set<string>;
   onMonthChange: (date: Date) => void;
   onDayPress: (date: Date) => void;
+  memoryCount?: number;
 }
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -31,6 +32,7 @@ export default function Calendar({
   pinnedDates = new Set(),
   onMonthChange,
   onDayPress,
+  memoryCount = 0,
 }: CalendarProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -43,31 +45,44 @@ export default function Calendar({
 
   return (
     <div className="w-full select-none">
-      {/* Header */}
-      <div className="flex items-center justify-between px-1 mb-3">
-        <button
-          onClick={handlePrev}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-90 transition-all"
-        >
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
-        <div className="text-center">
-          <span className="text-base font-semibold text-gray-900 dark:text-gray-100 capitalize">
+      {/* Header — month name left, count right */}
+      <div className="flex items-center justify-between px-1 mb-4">
+        <div>
+          <span className="capitalize" style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
             {format(currentMonth, 'MMMM', { locale: ptBR })}
           </span>
-          <span className="text-base font-normal text-gray-400 ml-1.5">
+          <span className="ml-2" style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-muted)' }}>
             {format(currentMonth, 'yyyy')}
           </span>
         </div>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          {memoryCount} {memoryCount === 1 ? 'memória' : 'memórias'}
+        </span>
+      </div>
 
+      {/* Month navigation */}
+      <div
+        className="flex items-center justify-center gap-4 mb-4 rounded-xl py-2"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+      >
+        <button
+          onClick={handlePrev}
+          className="w-8 h-8 flex items-center justify-center rounded-lg active:scale-90"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <span className="capitalize" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+          {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+        </span>
         <button
           onClick={handleNext}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-90 transition-all"
+          className="w-8 h-8 flex items-center justify-center rounded-lg active:scale-90"
+          style={{ color: 'var(--text-muted)' }}
         >
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -76,13 +91,11 @@ export default function Calendar({
       {/* Weekday labels */}
       <div className="grid grid-cols-7 mb-1">
         {WEEKDAYS.map((d, i) => (
-          <div key={i} className="text-center text-[11px] font-medium text-gray-400 py-1">
-            {d}
-          </div>
+          <div key={i} className="text-center py-1 meta-label">{d}</div>
         ))}
       </div>
 
-      {/* Days grid — h-10 fixed height prevents overflow/cut */}
+      {/* Days grid */}
       <div className="grid grid-cols-7 gap-y-0.5">
         {days.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
@@ -95,27 +108,28 @@ export default function Calendar({
             <button
               key={dateKey}
               onClick={() => onDayPress(day)}
-              className={[
-                'cal-day relative flex flex-col items-center justify-center h-10 rounded-xl mx-0.5',
-                !inMonth ? 'opacity-20' : '',
-                isT
-                  ? 'bg-violet-600 text-white font-semibold shadow-sm shadow-violet-400/30'
+              className={['cal-day relative flex flex-col items-center justify-center h-10 mx-0.5', !inMonth ? 'opacity-20' : ''].join(' ')}
+              style={{
+                borderRadius: '8px',
+                ...(isT
+                  ? { background: 'var(--accent-purple)', color: '#FFFFFF', fontWeight: 600 }
                   : hasMemory
-                  ? 'bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-medium'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5',
-              ].join(' ')}
+                  ? { background: 'color-mix(in srgb, var(--accent-purple) 12%, transparent)', color: 'var(--accent-purple)', fontWeight: 500 }
+                  : { color: 'var(--text-secondary)' }),
+                ...(isT ? {} : { border: isT ? `1px solid var(--accent-purple)` : undefined }),
+              }}
             >
               <span className="text-sm leading-none">{format(day, 'd')}</span>
               {hasMemory && (
                 <span
-                  className={[
-                    'absolute bottom-1 w-1 h-1 rounded-full',
-                    isT
-                      ? 'bg-white/70'
+                  className="absolute bottom-1 w-1 h-1 rounded-full"
+                  style={{
+                    background: isT
+                      ? 'rgba(255,255,255,0.7)'
                       : isPinned
-                      ? 'bg-amber-400'
-                      : 'bg-violet-400 dark:bg-violet-500',
-                  ].join(' ')}
+                      ? 'var(--accent-amber)'
+                      : 'var(--accent-purple)',
+                  }}
                 />
               )}
             </button>

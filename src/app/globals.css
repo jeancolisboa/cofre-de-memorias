@@ -2,21 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Google Fonts ────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* ── CSS Variables ───────────────────────────── */
+:root {
+  --bg-base: #F5F4F0;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F9F9F9;
+  --border: #E5E5EA;
+  --text-primary: #0D0D0F;
+  --text-secondary: #555560;
+  --text-muted: #AAAAB0;
+
+  --accent-purple: #7B6FEF;
+  --accent-pink: #E8527A;
+  --accent-teal: #2EAFA8;
+  --accent-amber: #D4A017;
+  --accent-green: #4DAA5A;
+
+  --mood-feliz: #7B6FEF;
+  --mood-animado: #E8527A;
+  --mood-tranquilo: #2EAFA8;
+  --mood-saudade: #D4A017;
+  --mood-cansado: #4DAA5A;
+}
+
+.dark {
+  --bg-base: #0D0D0F;
+  --bg-card: #1A1A1F;
+  --bg-card-hover: #1E1E24;
+  --border: #2A2A30;
+  --text-primary: #FFFFFF;
+  --text-secondary: #BCBCC8;
+  --text-muted: #444450;
+
+  --accent-purple: #9B8FFF;
+  --accent-pink: #FF6B9D;
+  --accent-teal: #4ECDC4;
+  --accent-amber: #FFD93D;
+  --accent-green: #6BCB77;
+
+  --mood-feliz: #9B8FFF;
+  --mood-animado: #FF6B9D;
+  --mood-tranquilo: #4ECDC4;
+  --mood-saudade: #FFD93D;
+  --mood-cansado: #6BCB77;
+}
+
 /* ── Base reset ─────────────────────────────── */
 * {
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
 }
 
-html, body {
+html {
   max-width: 100vw;
-  overflow-x: hidden;
   overscroll-behavior: none;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  transition: background 0.3s, color 0.3s;
 }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── Scrollbar custom ────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-card); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ── Scrollbar hide ──────────────────────────── */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -24,6 +88,27 @@ body {
 
 /* ── Safe area ───────────────────────────────── */
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+
+/* ── Typography ──────────────────────────────── */
+.screen-title {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.date-display {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.meta-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
 
 /* ── Animations ──────────────────────────────── */
 @keyframes slideUp {
@@ -34,9 +119,16 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes musicBars {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1); }
+}
 
 .animate-slide-up { animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
 .animate-fade-in  { animation: fadeIn 0.18s ease; }
+.music-bar { animation: musicBars 0.8s ease-in-out infinite; transform-origin: bottom; }
+.music-bar:nth-child(2) { animation-delay: 0.15s; }
+.music-bar:nth-child(3) { animation-delay: 0.3s; }
 
 /* ── Calendar day press ──────────────────────── */
 .cal-day { transition: transform 0.1s ease, background 0.1s ease; }
@@ -48,5 +140,17 @@ textarea { resize: none; }
 /* ── Tag chip ────────────────────────────────── */
 .tag-chip {
   @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
-  @apply bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300;
+  background: color-mix(in srgb, var(--accent-purple) 15%, transparent);
+  color: var(--accent-purple);
+}
+
+/* ── Focus accessible ────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: 2px;
+}
+
+/* ── Transitions on interactive elements ────── */
+button, a, input, textarea {
+  transition: all 0.2s ease;
 }
