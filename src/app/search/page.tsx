@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BottomNav from '@/components/BottomNav';
@@ -8,12 +8,14 @@ import Sidebar from '@/components/Sidebar';
 import MemoryModal from '@/components/MemoryModal';
 import { createClient } from '@/lib/supabase/client';
 import type { Memory } from '@/types';
+import { Users, Music } from 'lucide-react';
 
 const FILTERS = ['Tudo', 'Música', 'Pessoa', 'Local', 'Tag'] as const;
 type Filter = typeof FILTERS[number];
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
+  const [allMemories, setAllMemories] = useState<Memory[]>([]);
   const [results, setResults] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -21,29 +23,92 @@ export default function SearchPage() {
   const [activeFilter, setActiveFilter] = useState<Filter>('Tudo');
   const supabase = createClient();
 
-  const search = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); setSearched(false); return; }
-    setLoading(true);
-    setSearched(true);
+  // Sugestões derivadas de todas as memórias
+  const topPeople = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allMemories.forEach((m) => m.people?.forEach((p) => { counts[p.name] = (counts[p.name] ?? 0) + 1; }));
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  }, [allMemories]);
+
+  const recentTags = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const m of allMemories) {
+      for (const t of m.tags ?? []) {
+        if (!seen.has(t.tag)) { seen.add(t.tag); result.push(t.tag); }
+      }
+    }
+    return result;
+  }, [allMemories]);
+
+  const topMusic = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const m of allMemories) {
+      if (m.music_data?.title && !seen.has(m.music_data.title)) {
+        seen.add(m.music_data.title);
+        result.push(m.music_data.title);
+      }
+    }
+    return result;
+  }, [allMemories]);
+
+  const fetchAll = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const { data } = await supabase
       .from('memories')
       .select('*, memory_music(*), memory_people(*), memory_tags(*)')
       .eq('user_id', user.id)
-      .ilike('text', `%${q}%`)
       .order('date', { ascending: false })
-      .limit(30);
-
-    setResults((data ?? []).map((m) => ({
+      .limit(500);
+    setAllMemories((data ?? []).map((m) => ({
       ...m,
       people: m.memory_people,
       tags: m.memory_tags,
       music_data: m.memory_music?.[0] ?? null,
     })));
-    setLoading(false);
   }, [supabase]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const filterMemories = useCallback((q: string, filter: Filter, memories: Memory[]) => {
+    if (!q.trim()) { setResults([]); setSearched(false); return; }
+    setSearched(true);
+    const lq = q.toLowerCase();
+    setResults(memories.filter((m) => {
+      switch (filter) {
+        case 'Música':
+          return m.music_data?.title?.toLowerCase().includes(lq) ||
+                 m.music_data?.artist?.toLowerCase().includes(lq);
+        case 'Pessoa':
+          return m.people?.some((p) => p.name.toLowerCase().includes(lq));
+        case 'Local':
+          return m.location?.toLowerCase().includes(lq);
+        case 'Tag':
+          return m.tags?.some((t) => t.tag.toLowerCase().includes(lq));
+        default:
+          return (
+            m.text?.toLowerCase().includes(lq) ||
+            m.location?.toLowerCase().includes(lq) ||
+            m.music_data?.title?.toLowerCase().includes(lq) ||
+            m.music_data?.artist?.toLowerCase().includes(lq) ||
+            m.people?.some((p) => p.name.toLowerCase().includes(lq)) ||
+            m.tags?.some((t) => t.tag.toLowerCase().includes(lq))
+          );
+      }
+    }));
+  }, []);
+
+  const search = useCallback((q: string) => {
+    setLoading(true);
+    filterMemories(q, activeFilter, allMemories);
+    setLoading(false);
+  }, [activeFilter, allMemories, filterMemories]);
+
+  useEffect(() => {
+    if (query.trim()) filterMemories(query, activeFilter, allMemories);
+  }, [activeFilter, allMemories, query, filterMemories]);
 
   return (
     <div className="flex" style={{ background: 'var(--bg-base)' }}>
@@ -51,10 +116,10 @@ export default function SearchPage() {
 
       <main className="flex-1 lg:ml-[220px]">
         <header
-          className="px-4 lg:px-8 pt-14 lg:pt-8 pb-4 sticky top-0 z-30"
+          className="px-4 lg:px-8 pt-4 lg:pt-8 pb-4 sticky top-0 z-30"
           style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
         >
-          <h1 className="mb-4" style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          <h1 className="hidden lg:block mb-4" style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
             Busca
           </h1>
 
@@ -71,8 +136,7 @@ export default function SearchPage() {
               type="search"
               value={query}
               onChange={(e) => { setQuery(e.target.value); search(e.target.value); }}
-              placeholder="buscar memórias..."
-              autoFocus
+              placeholder="Buscar memórias..."
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: 'var(--text-primary)', caretColor: 'var(--accent-purple)' }}
             />
@@ -127,11 +191,63 @@ export default function SearchPage() {
           )}
 
           {!loading && !searched && (
-            <div className="text-center pt-12">
-              <p className="text-3xl mb-3">✨</p>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Digite para buscar nas suas memórias
-              </p>
+            <div className="search-empty">
+              {topPeople.length > 0 && (
+                <div className="search-suggestions">
+                  <p className="suggestions-label">pessoas frequentes</p>
+                  <div className="suggestion-chips-row">
+                    {topPeople.slice(0, 4).map((p) => (
+                      <button
+                        key={p}
+                        className="suggestion-chip"
+                        onClick={() => { setQuery(p); setActiveFilter('Pessoa'); search(p); }}
+                      >
+                        <Users size={11} /> {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {recentTags.length > 0 && (
+                <div className="search-suggestions">
+                  <p className="suggestions-label">tags recentes</p>
+                  <div className="suggestion-chips-row">
+                    {recentTags.slice(0, 6).map((t) => (
+                      <button
+                        key={t}
+                        className="suggestion-chip"
+                        onClick={() => { setQuery(t); setActiveFilter('Tag'); search(t); }}
+                      >
+                        # {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {topMusic.length > 0 && (
+                <div className="search-suggestions">
+                  <p className="suggestions-label">músicas</p>
+                  <div className="suggestion-chips-row">
+                    {topMusic.slice(0, 3).map((m) => (
+                      <button
+                        key={m}
+                        className="suggestion-chip"
+                        onClick={() => { setQuery(m); setActiveFilter('Música'); search(m); }}
+                      >
+                        <Music size={11} /> {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {topPeople.length === 0 && recentTags.length === 0 && topMusic.length === 0 && (
+                <div className="text-center pt-8">
+                  <p className="text-3xl mb-3">✨</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    Digite para buscar nas suas memórias
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

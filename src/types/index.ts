@@ -1,9 +1,10 @@
-export type Mood = '😊' | '😢' | '😡' | '😍' | '😴' | '🤩' | '😌' | '😰' | '🥳' | '🤔';
+export type Mood = string;
 
 export interface Memory {
   id: string;
   user_id: string;
   date: string; // ISO date string YYYY-MM-DD
+  end_date: string | null; // ISO date string YYYY-MM-DD, null = single day
   text: string;
   mood: Mood | null;
   music: string | null;
@@ -63,4 +64,5 @@ export interface MemoryFormData {
   people: string[];
   tags: string[];
   is_pinned: boolean;
+  end_date: string | null; // YYYY-MM-DD, null = single day
 }

@@ -23,6 +23,25 @@ const ACCENT_COLORS = [
   'var(--accent-amber)',
 ];
 
+const MOOD_COLORS: Record<string, string> = {
+  '😊': '#9B8FFF',
+  '🥳': '#FF6B9D',
+  '😍': '#FF6B9D',
+  '🤩': '#FFD93D',
+  '😌': '#4ECDC4',
+  '🥰': '#FF6B9D',
+  '😂': '#FFD93D',
+  '😢': '#6B9BFF',
+  '🥺': '#C49BFF',
+  '😤': '#FF8C6B',
+  '😴': '#A0A0B8',
+  '🤔': '#9B8FFF',
+  '😎': '#4ECDC4',
+  '🫶': '#FF6B9D',
+  '🌟': '#FFD93D',
+  '💫': '#C49BFF',
+};
+
 export default function StatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,7 +165,7 @@ export default function StatsPage() {
                               <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: 'var(--border)' }}>
                                 <div
                                   className="h-full rounded-full"
-                                  style={{ width: `${pct}%`, background: 'var(--accent-purple)' }}
+                                  style={{ width: `${pct}%`, background: MOOD_COLORS[mood] ?? 'var(--accent-purple)' }}
                                 />
                               </div>
                               <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '28px', textAlign: 'right' }}>

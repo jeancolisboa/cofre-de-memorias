@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
@@ -11,12 +11,15 @@ import MemoryModal from '@/components/MemoryModal';
 import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
 import type { Memory, MemoryFormData } from '@/types';
+import { Plus, Sun, Moon, LogOut, Clock, Star, MapPin, ChevronRight } from 'lucide-react';
 
 export default function HomePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [memoriesMap, setMemoriesMap] = useState<Map<string, Memory>>(new Map());
+  const [memoriesMap, setMemoriesMap] = useState<Map<string, Memory[]>>(new Map());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMemory, setSelectedMemory] = useState<Memory | null | undefined>(undefined);
+  const [pendingDayMemories, setPendingDayMemories] = useState<Memory[] | null>(null);
+  const [dragInitialEndDate, setDragInitialEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, toggle } = useTheme();
@@ -30,21 +33,29 @@ export default function HomePage() {
     const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
+    const startKey = format(start, 'yyyy-MM-dd');
+    const endKey = format(end, 'yyyy-MM-dd');
+
+    // Fetch memories whose range overlaps with the current month:
+    // date <= month_end AND (end_date IS NULL OR end_date >= month_start)
     const { data, error } = await supabase
       .from('memories')
       .select('*, memory_music(*), memory_people(*), memory_tags(*)')
       .eq('user_id', user.id)
-      .gte('date', format(start, 'yyyy-MM-dd'))
-      .lte('date', format(end, 'yyyy-MM-dd'));
+      .lte('date', endKey)
+      .or(`end_date.is.null,end_date.gte.${startKey}`);
 
     if (!error && data) {
-      const map = new Map<string, Memory>();
-      data.forEach((m) => map.set(m.date, {
-        ...m,
-        people: m.memory_people,
-        tags: m.memory_tags,
-        music_data: m.memory_music?.[0] ?? null,
-      }));
+      const map = new Map<string, Memory[]>();
+      data.forEach((m) => {
+        const mem: Memory = {
+          ...m,
+          people: m.memory_people,
+          tags: m.memory_tags,
+          music_data: m.memory_music?.[0] ?? null,
+        };
+        map.set(m.date, [...(map.get(m.date) ?? []), mem]);
+      });
       setMemoriesMap(map);
     }
     setLoading(false);
@@ -52,10 +63,52 @@ export default function HomePage() {
 
   useEffect(() => { fetchMemories(); }, [fetchMemories]);
 
+  const handleRangeSelect = useCallback((start: Date, end: Date) => {
+    setSelectedDate(start);
+    setSelectedMemory(null);
+    setDragInitialEndDate(format(end, 'yyyy-MM-dd'));
+  }, []);
+
+  const ranges = useMemo(() =>
+    Array.from(memoriesMap.values())
+      .flat()
+      .filter((m) => m.end_date)
+      .map((m) => ({ start: m.date, end: m.end_date!, mood: m.mood ?? null })),
+    [memoriesMap]
+  );
+
+  const moodMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    memoriesMap.forEach((mems, date) => { map.set(date, mems[0]?.mood ?? null); });
+    return map;
+  }, [memoriesMap]);
+
   const handleDayPress = useCallback((date: Date) => {
     const key = format(date, 'yyyy-MM-dd');
-    setSelectedDate(date);
-    setSelectedMemory(memoriesMap.get(key) ?? null);
+
+    const directMemories = memoriesMap.get(key) ?? [];
+    const rangeMemories = Array.from(memoriesMap.values())
+      .flat()
+      .filter((m) => m.end_date && key > m.date && key <= m.end_date);
+
+    // Deduplicate by id
+    const seen = new Set<string>();
+    const allMemories: Memory[] = [];
+    for (const m of [...directMemories, ...rangeMemories]) {
+      if (!seen.has(m.id)) { seen.add(m.id); allMemories.push(m); }
+    }
+
+    if (allMemories.length === 0) {
+      setSelectedDate(date);
+      setSelectedMemory(null);
+    } else if (allMemories.length === 1) {
+      const mem = allMemories[0];
+      setSelectedDate(new Date(mem.date + 'T12:00:00'));
+      setSelectedMemory(mem);
+    } else {
+      setSelectedDate(date);
+      setPendingDayMemories(allMemories);
+    }
   }, [memoriesMap]);
 
   const handleSave = useCallback(async (formData: MemoryFormData) => {
@@ -64,22 +117,23 @@ export default function HomePage() {
     if (!user) return;
 
     const dateKey = format(selectedDate, 'yyyy-MM-dd');
-    const existing = memoriesMap.get(dateKey);
     let memoryId: string;
 
-    if (existing) {
+    if (selectedMemory) {
       const { error } = await supabase.from('memories').update({
         text: formData.text, mood: formData.mood,
         music: formData.music || null, location: formData.location || null,
-        is_pinned: formData.is_pinned, updated_at: new Date().toISOString(),
-      }).eq('id', existing.id);
+        is_pinned: formData.is_pinned, end_date: formData.end_date || null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', selectedMemory.id);
       if (error) throw error;
-      memoryId = existing.id;
+      memoryId = selectedMemory.id;
     } else {
       const { data, error } = await supabase.from('memories').insert({
         user_id: user.id, date: dateKey, text: formData.text,
         mood: formData.mood, music: formData.music || null,
         location: formData.location || null, is_pinned: formData.is_pinned,
+        end_date: formData.end_date || null,
       }).select().single();
       if (error) throw error;
       memoryId = data.id;
@@ -104,13 +158,19 @@ export default function HomePage() {
       await supabase.from('memory_tags').insert(formData.tags.map((tag) => ({ memory_id: memoryId, tag })));
 
     await fetchMemories();
-  }, [selectedDate, memoriesMap, supabase, fetchMemories]);
+  }, [selectedDate, selectedMemory, supabase, fetchMemories]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedDate || !selectedMemory) return;
     const key = format(selectedDate, 'yyyy-MM-dd');
     await supabase.from('memories').delete().eq('id', selectedMemory.id);
-    setMemoriesMap((prev) => { const n = new Map(prev); n.delete(key); return n; });
+    setMemoriesMap((prev) => {
+      const n = new Map(prev);
+      const arr = (n.get(key) ?? []).filter((m) => m.id !== selectedMemory.id);
+      if (arr.length === 0) n.delete(key);
+      else n.set(key, arr);
+      return n;
+    });
   }, [selectedDate, selectedMemory, supabase]);
 
   const handleLogout = async () => {
@@ -120,16 +180,21 @@ export default function HomePage() {
 
   const memoriesDates = new Set(memoriesMap.keys());
   const pinnedDates = new Set(
-    Array.from(memoriesMap.entries()).filter(([, m]) => m.is_pinned).map(([d]) => d)
+    Array.from(memoriesMap.entries())
+      .filter(([, mems]) => mems.some((m) => m.is_pinned))
+      .map(([d]) => d)
   );
 
-  const sortedMemories = Array.from(memoriesMap.entries()).sort(([a], [b]) => b.localeCompare(a));
+  const totalMemories = Array.from(memoriesMap.values()).reduce((acc, mems) => acc + mems.length, 0);
+
+  const sortedMemories = Array.from(memoriesMap.entries())
+    .flatMap(([dateKey, mems]) => mems.map((m) => [dateKey, m] as [string, Memory]))
+    .sort(([a], [b]) => b.localeCompare(a));
 
   return (
     <div className="flex" style={{ background: 'var(--bg-base)' }}>
       <Sidebar />
 
-      {/* Main — natural height, body scrolls */}
       <main className="flex-1 lg:ml-[220px]">
         {/* Header */}
         <header
@@ -137,35 +202,30 @@ export default function HomePage() {
           style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
         >
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--text-primary)' }}>
-              Cofre de Memórias
-            </h1>
-            <p className="meta-label mt-1 capitalize">
-              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })} · {memoriesMap.size} {memoriesMap.size === 1 ? 'memória' : 'memórias'}
+            <h1 className="page-title">Cofre de Memórias</h1>
+            <p className="page-subtitle">
+              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })} · {totalMemories} {totalMemories === 1 ? 'memória' : 'memórias'}
             </p>
           </div>
 
           <div className="flex items-center gap-2 relative">
-            {/* Theme toggle — mobile only */}
+            <button
+              className="new-memory-btn hidden lg:flex"
+              onClick={() => { setSelectedDate(new Date()); setSelectedMemory(null); }}
+            >
+              <Plus size={14} />
+              Nova memória
+            </button>
+
             <button
               onClick={toggle}
               className="lg:hidden w-9 h-9 flex items-center justify-center rounded-full"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
               title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
             >
-              {theme === 'dark' ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="4" />
-                  <path strokeLinecap="round" d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            {/* Avatar / menu — mobile only (desktop handled in sidebar) */}
             <div className="relative lg:hidden">
               <button
                 onClick={() => setMenuOpen((o) => !o)}
@@ -189,9 +249,7 @@ export default function HomePage() {
                       className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2"
                       style={{ color: '#EF4444' }}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
+                      <LogOut size={16} />
                       Sair
                     </button>
                   </div>
@@ -201,11 +259,10 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Content — two columns on desktop */}
+        {/* Content */}
         <div className="px-4 lg:px-8 py-6">
           <div className="flex gap-6 items-start">
 
-            {/* Left column: calendar (natural width, max 560px) */}
             <div className="flex-1 min-w-0" style={{ maxWidth: '560px' }}>
               <div
                 className="rounded-[14px] p-4"
@@ -215,24 +272,29 @@ export default function HomePage() {
                   currentMonth={currentMonth}
                   memoriesDates={memoriesDates}
                   pinnedDates={pinnedDates}
+                  ranges={ranges}
+                  moodMap={moodMap}
                   onMonthChange={setCurrentMonth}
                   onDayPress={handleDayPress}
-                  memoryCount={memoriesMap.size}
+                  onRangeSelect={handleRangeSelect}
+                  memoryCount={totalMemories}
                 />
               </div>
 
-              {/* Mobile-only: memories below calendar */}
-              {memoriesMap.size > 0 && (
+              {totalMemories > 0 && (
                 <div className="lg:hidden mt-6">
-                  <p className="meta-label mb-3">Memórias recentes</p>
-                  <div className="space-y-2">
+                  <div className="section-label">
+                    <Clock size={14} />
+                    Memórias recentes
+                  </div>
+                  <div>
                     {sortedMemories.slice(0, 5).map(([dateKey, memory]) => (
                       <MemoryCard
-                        key={dateKey}
+                        key={memory.id}
                         dateKey={dateKey}
                         memory={memory}
                         onClick={() => {
-                          setSelectedDate(new Date(dateKey + 'T12:00:00'));
+                          setSelectedDate(new Date(memory.date + 'T12:00:00'));
                           setSelectedMemory(memory);
                         }}
                       />
@@ -251,12 +313,14 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Right column: memories — desktop only, sticky */}
             <div
               className="hidden lg:block flex-shrink-0 sticky top-[88px]"
               style={{ width: '320px' }}
             >
-              <p className="meta-label mb-3">Memórias recentes</p>
+              <div className="section-label">
+                <Clock size={14} />
+                Memórias recentes
+              </div>
               {loading && (
                 <div className="flex items-center justify-center pt-6">
                   <div
@@ -265,22 +329,22 @@ export default function HomePage() {
                   />
                 </div>
               )}
-              {!loading && memoriesMap.size === 0 && (
+              {!loading && totalMemories === 0 && (
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                   Nenhuma memória este mês.
                 </p>
               )}
               <div
-                className="space-y-2 overflow-y-auto"
+                className="overflow-y-auto"
                 style={{ maxHeight: 'calc(100vh - 120px)' }}
               >
                 {sortedMemories.map(([dateKey, memory]) => (
                   <MemoryCard
-                    key={dateKey}
+                    key={memory.id}
                     dateKey={dateKey}
                     memory={memory}
                     onClick={() => {
-                      setSelectedDate(new Date(dateKey + 'T12:00:00'));
+                      setSelectedDate(new Date(memory.date + 'T12:00:00'));
                       setSelectedMemory(memory);
                     }}
                   />
@@ -291,11 +355,74 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Multi-memory picker */}
+        {pendingDayMemories && selectedDate && (
+          <div
+            className="fixed inset-0 z-50 flex flex-col justify-end animate-fade-in"
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+            onClick={() => setPendingDayMemories(null)}
+          >
+            <div
+              className="rounded-t-3xl p-5"
+              style={{ background: 'var(--bg-card)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center mb-4">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border)' }} />
+              </div>
+              <p className="meta-label mb-3">
+                {format(selectedDate, "d 'de' MMMM", { locale: ptBR })} · {pendingDayMemories.length} memórias
+              </p>
+              <div className="space-y-2">
+                {pendingDayMemories.map((mem) => (
+                  <button
+                    key={mem.id}
+                    onClick={() => {
+                      setSelectedDate(new Date(mem.date + 'T12:00:00'));
+                      setSelectedMemory(mem);
+                      setPendingDayMemories(null);
+                    }}
+                    className="w-full text-left rounded-[14px] px-4 py-3 active:scale-[0.98]"
+                    style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl flex-shrink-0">{mem.mood ?? '📝'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="line-clamp-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {mem.text}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                          {mem.end_date
+                            ? `${format(new Date(mem.date + 'T12:00:00'), "d MMM", { locale: ptBR })} → ${format(new Date(mem.end_date + 'T12:00:00'), "d MMM", { locale: ptBR })}`
+                            : format(new Date(mem.date + 'T12:00:00'), "d 'de' MMMM", { locale: ptBR })
+                          }
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+                    </div>
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setSelectedMemory(null);
+                    setPendingDayMemories(null);
+                  }}
+                  className="w-full py-3 rounded-[14px] text-sm mt-1"
+                  style={{ border: '1px dashed var(--border)', color: 'var(--text-muted)' }}
+                >
+                  + Criar nova memória neste dia
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedDate && selectedMemory !== undefined && (
           <MemoryModal
             date={selectedDate}
             memory={selectedMemory}
-            onClose={() => { setSelectedDate(null); setSelectedMemory(undefined); }}
+            initialEndDate={dragInitialEndDate}
+            onClose={() => { setSelectedDate(null); setSelectedMemory(undefined); setDragInitialEndDate(null); }}
             onSave={handleSave}
             onDelete={selectedMemory ? handleDelete : undefined}
           />
@@ -308,25 +435,41 @@ export default function HomePage() {
   );
 }
 
+const MOOD_BG: Record<string, string> = {
+  '😊': 'rgba(155,143,255,0.14)',
+  '😍': 'rgba(255,107,157,0.12)',
+  '🤩': 'rgba(255,217,61,0.10)',
+  '😌': 'rgba(78,205,196,0.12)',
+  '😢': 'rgba(255,107,157,0.12)',
+  '😡': 'rgba(239,68,68,0.10)',
+  '😴': 'rgba(155,143,255,0.10)',
+  '😰': 'rgba(255,107,157,0.12)',
+  '🥳': 'rgba(255,217,61,0.10)',
+  '🤔': 'rgba(155,143,255,0.10)',
+};
+
 function MemoryCard({ dateKey, memory, onClick }: { dateKey: string; memory: Memory; onClick: () => void }) {
+  const moodBg = (memory.mood && MOOD_BG[memory.mood]) ?? 'rgba(155,143,255,0.10)';
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-[14px] px-4 py-3 active:scale-[0.98]"
-      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-    >
-      <div className="flex items-start gap-3">
-        <span className="text-lg flex-shrink-0 mt-0.5">{memory.mood ?? '📝'}</span>
-        <div className="flex-1 min-w-0">
-          <p className="line-clamp-2 leading-relaxed" style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            {memory.text}
-          </p>
-          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
-            {memory.is_pinned && ' · ⭐'}
-            {memory.location && ` · ${memory.location}`}
-          </p>
-        </div>
+    <button onClick={onClick} className="memory-list-item active:opacity-60">
+      <span className="memory-emoji-box" style={{ background: moodBg }}>
+        {memory.mood ?? '📝'}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="memory-card-title">{memory.text}</p>
+        <p className="memory-card-meta">
+          <Clock size={14} />
+          {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
+          {memory.is_pinned && (
+            <Star size={14} style={{ color: 'var(--accent-amber)', fill: 'var(--accent-amber)', marginLeft: '2px' }} />
+          )}
+          {memory.location && (
+            <>
+              <MapPin size={14} style={{ marginLeft: '2px' }} />
+              <span>{memory.location}</span>
+            </>
+          )}
+        </p>
       </div>
     </button>
   );
