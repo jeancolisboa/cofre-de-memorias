@@ -23,8 +23,8 @@ export default function GroupCreateSheet({ onClose, onCreate }: Props) {
     setSaving(true);
     setError('');
     const { data: groupId, error: rpcError } = await supabase.rpc('create_group_with_admin', {
-      name: name.trim(),
-      emoji,
+      p_name: name.trim(),
+      p_emoji: emoji,
     });
     setSaving(false);
     if (rpcError || !groupId) {
