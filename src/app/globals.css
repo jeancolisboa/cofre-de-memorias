@@ -1178,6 +1178,60 @@ p.page-subtitle {
   color: var(--text-muted);
 }
 
+/* Botões aceitar / recusar */
+.notif-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  margin-left: 46px; /* alinha com o texto (avatar 36px + gap 10px) */
+}
+
+.notif-action-btn {
+  flex: 1;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s;
+}
+
+.notif-action-btn:hover { opacity: 0.8; }
+
+.notif-action-btn--accept {
+  background: rgba(155, 143, 255, 0.18);
+  color: var(--accent-purple);
+  border-color: rgba(155, 143, 255, 0.3);
+}
+
+.notif-action-btn--reject {
+  background: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Mobile: dropdown ocupa toda a largura */
+@media (max-width: 1023px) {
+  .notif-dropdown {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 0 0 16px 16px;
+    max-height: 60vh;
+  }
+
+  .notif-list {
+    max-height: calc(60vh - 52px);
+  }
+
+  .notif-action-btn {
+    min-height: 36px;
+    font-size: 13px;
+  }
+}
+
 /* ── Search empty suggestions ────────────────── */
 .search-empty {
   padding: 24px 0;

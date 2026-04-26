@@ -70,7 +70,7 @@ async function enrichWithProfiles(
   rows: Omit<NotifItem, 'display_name' | 'avatar_url'>[],
   supabase: ReturnType<typeof createClient>,
 ): Promise<NotifItem[]> {
-  const ids = [...new Set(rows.map((r) => r.from_user_id).filter(Boolean))] as string[];
+  const ids = Array.from(new Set(rows.map((r) => r.from_user_id).filter(Boolean))) as string[];
   const { data: profiles } = ids.length > 0
     ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', ids)
     : { data: [] };
@@ -205,6 +205,32 @@ export default function NotificationBell() {
     }
   }, [markRead, router]);
 
+  const handleAccept = useCallback(async (notif: NotifItem) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !notif.memory_id) return;
+    await supabase.from('memory_members').upsert({
+      memory_id: notif.memory_id,
+      user_id: user.id,
+      role: 'viewer',
+      invited_by: notif.from_user_id,
+      accepted_at: new Date().toISOString(),
+    }, { onConflict: 'memory_id,user_id' });
+    await markRead(notif.id);
+  }, [supabase, markRead]);
+
+  const handleReject = useCallback(async (notif: NotifItem) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !notif.memory_id) return;
+    await Promise.all([
+      supabase.from('memory_people').delete()
+        .eq('memory_id', notif.memory_id).eq('user_id', user.id),
+      supabase.from('memory_members').delete()
+        .eq('memory_id', notif.memory_id).eq('user_id', user.id),
+    ]);
+    await markRead(notif.id);
+    setNotifs((prev) => prev.filter((n) => n.id !== notif.id));
+  }, [supabase, markRead]);
+
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <>
@@ -266,37 +292,66 @@ export default function NotificationBell() {
               </div>
             )}
 
-            {!loading && notifs.map((notif) => (
-              <button
-                key={notif.id}
-                className={`notif-item${!notif.read_at ? ' notif-item--unread' : ''}`}
-                onClick={() => handleNotifClick(notif)}
-              >
-                {!notif.read_at && <span className="notif-unread-dot" />}
-
-                <div className="notif-avatar">
-                  {notif.avatar_url
-                    ? (
-                      <img
-                        src={notif.avatar_url}
-                        alt=""
-                        className="notif-avatar-img"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span>{getInitial(notif.display_name)}</span>
-                    )
-                  }
+            {!loading && notifs.map((notif) => {
+              const isPendingTag = !notif.read_at && notif.type === 'memory_tag';
+              return isPendingTag ? (
+                <div
+                  key={notif.id}
+                  className="notif-item notif-item--unread"
+                  style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}
+                >
+                  <span className="notif-unread-dot" />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <div className="notif-avatar">
+                      {notif.avatar_url
+                        ? <img src={notif.avatar_url} alt="" className="notif-avatar-img" referrerPolicy="no-referrer" />
+                        : <span>{getInitial(notif.display_name)}</span>
+                      }
+                    </div>
+                    <div className="notif-content">
+                      <p className="notif-text">
+                        {getNotifText(notif.type, notif.display_name, notif.meta)}
+                      </p>
+                      <span className="notif-time">{timeAgo(notif.created_at)}</span>
+                    </div>
+                  </div>
+                  <div className="notif-actions">
+                    <button
+                      className="notif-action-btn notif-action-btn--accept"
+                      onClick={() => handleAccept(notif)}
+                    >
+                      ✓ Aceitar
+                    </button>
+                    <button
+                      className="notif-action-btn notif-action-btn--reject"
+                      onClick={() => handleReject(notif)}
+                    >
+                      ✕ Recusar
+                    </button>
+                  </div>
                 </div>
-
-                <div className="notif-content">
-                  <p className="notif-text">
-                    {getNotifText(notif.type, notif.display_name, notif.meta)}
-                  </p>
-                  <span className="notif-time">{timeAgo(notif.created_at)}</span>
-                </div>
-              </button>
-            ))}
+              ) : (
+                <button
+                  key={notif.id}
+                  className={`notif-item${!notif.read_at ? ' notif-item--unread' : ''}`}
+                  onClick={() => handleNotifClick(notif)}
+                >
+                  {!notif.read_at && <span className="notif-unread-dot" />}
+                  <div className="notif-avatar">
+                    {notif.avatar_url
+                      ? <img src={notif.avatar_url} alt="" className="notif-avatar-img" referrerPolicy="no-referrer" />
+                      : <span>{getInitial(notif.display_name)}</span>
+                    }
+                  </div>
+                  <div className="notif-content">
+                    <p className="notif-text">
+                      {getNotifText(notif.type, notif.display_name, notif.meta)}
+                    </p>
+                    <span className="notif-time">{timeAgo(notif.created_at)}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

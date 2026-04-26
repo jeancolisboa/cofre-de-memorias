@@ -8,10 +8,9 @@ import Calendar from '@/components/Calendar';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
 import MemoryModal from '@/components/MemoryModal';
-import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
 import type { Memory, MemoryFormData } from '@/types';
-import { Plus, Sun, Moon, LogOut, Clock, Star, MapPin, ChevronRight } from 'lucide-react';
+import { Plus, Clock, Star, MapPin, ChevronRight } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
 
 export default function HomePage() {
@@ -22,8 +21,6 @@ export default function HomePage() {
   const [pendingDayMemories, setPendingDayMemories] = useState<Memory[] | null>(null);
   const [dragInitialEndDate, setDragInitialEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { theme, toggle } = useTheme();
   const router = useRouter();
   const supabase = createClient();
 
@@ -42,7 +39,6 @@ export default function HomePage() {
     const { data, error } = await supabase
       .from('memories')
       .select('*, memory_music(*), memory_people(*), memory_tags(*)')
-      .eq('user_id', user.id)
       .lte('date', endKey)
       .or(`end_date.is.null,end_date.gte.${startKey}`);
 
@@ -200,11 +196,6 @@ export default function HomePage() {
     });
   }, [selectedDate, selectedMemory, supabase]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
   const memoriesDates = new Set(memoriesMap.keys());
   const pinnedDates = new Set(
     Array.from(memoriesMap.entries())
@@ -228,14 +219,21 @@ export default function HomePage() {
           className="px-4 lg:px-8 pt-14 lg:pt-8 pb-3 flex items-center justify-between sticky top-0 z-30"
           style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
         >
-          <div>
+          {/* Mobile: sino à esquerda */}
+          <div className="lg:hidden">
+            <NotificationBell />
+          </div>
+
+          {/* Desktop: título + subtítulo */}
+          <div className="hidden lg:block">
             <h1 className="page-title">Cofre de Memórias</h1>
             <p className="page-subtitle">
               {format(currentMonth, 'MMMM yyyy', { locale: ptBR })} · {totalMemories} {totalMemories === 1 ? 'memória' : 'memórias'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 relative">
+          <div className="flex items-center gap-2">
+            {/* Desktop: sino + botão "Nova memória" */}
             <div className="hidden lg:flex items-center gap-2">
               <NotificationBell />
               <button
@@ -247,45 +245,15 @@ export default function HomePage() {
               </button>
             </div>
 
+            {/* Mobile: botão "+" icon-only */}
             <button
-              onClick={toggle}
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-full"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full"
+              style={{ background: 'var(--accent-purple)', color: '#0D0D0F' }}
+              onClick={() => { setSelectedDate(new Date()); setSelectedMemory(null); }}
+              title="Nova memória"
             >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <Plus size={22} strokeWidth={2.5} />
             </button>
-
-            <div className="relative lg:hidden">
-              <button
-                onClick={() => setMenuOpen((o) => !o)}
-                className="w-9 h-9 flex items-center justify-center rounded-full"
-                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <circle cx="12" cy="8" r="4" />
-                  <path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div
-                    className="absolute right-0 top-11 z-20 w-40 rounded-2xl py-1 overflow-hidden"
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-                  >
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2"
-                      style={{ color: '#EF4444' }}
-                    >
-                      <LogOut size={16} />
-                      Sair
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
           </div>
         </header>
 
