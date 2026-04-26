@@ -122,12 +122,14 @@ export default function NotificationBell() {
   useEffect(() => {
     let mounted = true;
     let channelRef: ReturnType<typeof supabase.channel> | null = null;
+    // Sufixo único por invocação evita colisão de nomes em Strict Mode
+    const channelKey = Math.random().toString(36).slice(2);
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!mounted || !user) return;
 
       channelRef = supabase
-        .channel(`notif-bell:${user.id}`)
+        .channel(`notif-bell:${user.id}:${channelKey}`)
         .on(
           'postgres_changes',
           {
