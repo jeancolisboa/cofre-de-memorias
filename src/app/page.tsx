@@ -21,6 +21,7 @@ export default function HomePage() {
   const [pendingDayMemories, setPendingDayMemories] = useState<Memory[] | null>(null);
   const [dragInitialEndDate, setDragInitialEndDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [groupMemoryIds, setGroupMemoryIds] = useState<Set<string>>(new Set());
   const router = useRouter();
   const supabase = createClient();
 
@@ -54,6 +55,18 @@ export default function HomePage() {
         map.set(m.date, [...(map.get(m.date) ?? []), mem]);
       });
       setMemoriesMap(map);
+
+      // Verificar quais memórias estão em algum grupo
+      const memIds = data.map((m) => m.id);
+      if (memIds.length > 0) {
+        const { data: gmData } = await supabase
+          .from('group_memories')
+          .select('memory_id')
+          .in('memory_id', memIds);
+        setGroupMemoryIds(new Set((gmData ?? []).map((r) => r.memory_id)));
+      } else {
+        setGroupMemoryIds(new Set());
+      }
     }
     setLoading(false);
   }, [currentMonth, supabase]);
@@ -209,6 +222,14 @@ export default function HomePage() {
     .flatMap(([dateKey, mems]) => mems.map((m) => [dateKey, m] as [string, Memory]))
     .sort(([a], [b]) => b.localeCompare(a));
 
+  const groupDates = useMemo(() => {
+    const dates = new Set<string>();
+    memoriesMap.forEach((mems, dateKey) => {
+      if (mems.some((m) => groupMemoryIds.has(m.id))) dates.add(dateKey);
+    });
+    return dates;
+  }, [memoriesMap, groupMemoryIds]);
+
   return (
     <div className="flex" style={{ background: 'var(--bg-base)' }}>
       <Sidebar />
@@ -272,6 +293,7 @@ export default function HomePage() {
                   pinnedDates={pinnedDates}
                   ranges={ranges}
                   moodMap={moodMap}
+                  groupDates={groupDates}
                   onMonthChange={setCurrentMonth}
                   onDayPress={handleDayPress}
                   onRangeSelect={handleRangeSelect}
@@ -291,6 +313,7 @@ export default function HomePage() {
                         key={memory.id}
                         dateKey={dateKey}
                         memory={memory}
+                        inGroup={groupMemoryIds.has(memory.id)}
                         onClick={() => {
                           setSelectedDate(new Date(memory.date + 'T12:00:00'));
                           setSelectedMemory(memory);
@@ -341,6 +364,7 @@ export default function HomePage() {
                     key={memory.id}
                     dateKey={dateKey}
                     memory={memory}
+                    inGroup={groupMemoryIds.has(memory.id)}
                     onClick={() => {
                       setSelectedDate(new Date(memory.date + 'T12:00:00'));
                       setSelectedMemory(memory);
@@ -446,12 +470,19 @@ const MOOD_BG: Record<string, string> = {
   '🤔': 'rgba(155,143,255,0.10)',
 };
 
-function MemoryCard({ dateKey, memory, onClick }: { dateKey: string; memory: Memory; onClick: () => void }) {
+function MemoryCard({ dateKey, memory, onClick, inGroup }: { dateKey: string; memory: Memory; onClick: () => void; inGroup?: boolean }) {
   const moodBg = (memory.mood && MOOD_BG[memory.mood]) ?? 'rgba(155,143,255,0.10)';
   return (
     <button onClick={onClick} className="memory-list-item active:opacity-60">
-      <span className="memory-emoji-box" style={{ background: moodBg }}>
+      <span className="memory-emoji-box" style={{ background: moodBg, position: 'relative' }}>
         {memory.mood ?? '📝'}
+        {inGroup && (
+          <span style={{
+            position: 'absolute', bottom: '-3px', right: '-5px',
+            fontSize: '9px', lineHeight: 1,
+            background: 'var(--bg-base)', borderRadius: '50%', padding: '1px',
+          }}>👥</span>
+        )}
       </span>
       <div className="flex-1 min-w-0">
         <p className="memory-card-title">{memory.text}</p>

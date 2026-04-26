@@ -65,7 +65,7 @@ export default function AddMemoryToGroupSheet({ groupId, groupName, existingMemo
     const { error } = await supabase.from('group_memories').insert({
       group_id: groupId,
       memory_id: memory.id,
-      posted_by: user.id,
+      added_by: user.id,
     });
 
     if (!error) {

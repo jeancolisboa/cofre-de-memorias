@@ -58,9 +58,10 @@ interface MemoryModalProps {
   onClose: () => void;
   onSave: (data: MemoryFormData) => Promise<void>;
   onDelete?: () => Promise<void>;
+  deleteLabel?: string;
 }
 
-export default function MemoryModal({ date, memory, initialEndDate, onClose, onSave, onDelete }: MemoryModalProps) {
+export default function MemoryModal({ date, memory, initialEndDate, onClose, onSave, onDelete, deleteLabel }: MemoryModalProps) {
   const [text, setText] = useState(memory?.text ?? '');
   const [mood, setMood] = useState<Mood | null>(memory?.mood ?? null);
   const [music, setMusic] = useState(
@@ -81,6 +82,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   const [showPicker, setShowPicker] = useState(false);
   const [tagFocused, setTagFocused] = useState(false);
   const [showMusicAC, setShowMusicAC] = useState(false);
+  const [memGroups, setMemGroups] = useState<{ name: string; emoji: string }[]>([]);
 
   const [suggestedPeople, setSuggestedPeople] = useState<string[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
@@ -134,6 +136,28 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   }, []);
 
   useEffect(() => { setTimeout(() => textRef.current?.focus(), 320); }, []);
+
+  // Busca grupos em que esta memória está
+  useEffect(() => {
+    const memId = memory?.id;
+    if (!memId) return;
+    let cancelled = false;
+    createClient()
+      .from('group_memories')
+      .select('groups(name, emoji)')
+      .eq('memory_id', memId)
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setMemGroups(
+          data.flatMap((r) => {
+            const g = r.groups as { name: string; emoji: string } | null;
+            return g ? [g] : [];
+          })
+        );
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memory?.id]);
 
   const autoResize = useCallback(() => {
     const el = textRef.current;
@@ -419,6 +443,28 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
 
           </div>
 
+          {/* Grupos */}
+          {memGroups.length > 0 && (
+            <div style={{ borderTop: '0.5px solid var(--border)', padding: '12px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ fontSize: '15px', flexShrink: 0, paddingTop: '2px', color: 'var(--text-muted)' }}>👥</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {memGroups.map((g, i) => (
+                    <span key={i} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      fontSize: '12px', color: 'var(--text-secondary)',
+                      background: 'rgba(155,143,255,0.08)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '20px', padding: '3px 10px',
+                    }}>
+                      {g.emoji} {g.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Deletar */}
           {memory && onDelete && (
             showDeleteConfirm ? (
@@ -441,7 +487,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
               </div>
             ) : (
               <button onClick={() => setShowDeleteConfirm(true)} className="sheet-delete">
-                Excluir memória
+                {deleteLabel ?? 'Excluir memória'}
               </button>
             )
           )}

@@ -7,142 +7,231 @@
 
 ---
 
+## Fases
+
+### ✅ FASE 1 — Base sólida (CONCLUÍDA)
+
+**Objetivo:** fundação funcional, uso pessoal completo.
+
+- [x] Auth Google OAuth via Supabase
+- [x] CRUD de memórias (criar, editar, excluir)
+- [x] Sheet lateral de edição (slide da direita no desktop, da base no mobile)
+- [x] Campos: texto livre, mood (emoji via emoji-mart), música, localização, @pessoas, #tags
+- [x] Autocomplete de músicas e pessoas do histórico
+- [x] Calendário mensal navegável com drag para criar ranges de datas
+- [x] Diferenciação visual no calendário por mood (cor individual por emoji)
+- [x] Fixar memórias com destaque no calendário
+- [x] Página de fixadas
+- [x] Busca full-text com sugestões (pessoas, tags, músicas recentes)
+- [x] Estatísticas: total, mês, sequência de dias, top moods/tags/pessoas
+- [x] Dark mode / light mode (persistido no localStorage)
+- [x] PWA instalável (manifest, ícones, standalone)
+- [x] Proteção por autenticação (middleware Next.js)
+
+---
+
+### ✅ FASE 2 — Social e Compartilhamento (CONCLUÍDA)
+
+**Objetivo:** memórias compartilhadas entre pessoas reais.
+
+**Schema (migration 002 + 003):**
+- [x] `profiles` — tabela pública com `display_name`, `avatar_url`, `email`; trigger `on_auth_user_created` para auto-populate; backfill de usuários existentes
+- [x] `memory_people.user_id` — coluna nullable para vincular pessoa a usuário real
+- [x] `memory_members` — papel de cada usuário em uma memória (owner/contributor/viewer), com `invited_by` e `accepted_at` nullable (NULL = pendente)
+- [x] `groups` — grupos com `name`, `emoji`, `created_by`, trigger `updated_at`
+- [x] `group_members` — role admin/member por grupo
+- [x] `group_memories` — vínculo memória ↔ grupo
+- [x] `notifications` — tipos: `memory_tag`, `group_invite`, `group_new_memory`, `on_this_day`
+- [x] RLS completo em todas as tabelas de compartilhamento
+- [x] `create_group_with_admin(p_name, p_emoji)` — função helper atômica (`SECURITY DEFINER`)
+- [x] Realtime habilitado na tabela `notifications`
+
+**Campo de pessoas com vínculo real:**
+- [x] Busca em `profiles` com debounce 300ms ao digitar 2+ caracteres
+- [x] Dropdown rico: avatar circular (foto ou inicial), nome, email
+- [x] Opção "Adicionar como texto livre" sempre disponível
+- [x] Chip roxo com ícone de link para usuários vinculados; chip padrão para texto livre
+- [x] Navegação por teclado (↑↓ Enter Tab Escape)
+
+**Notificações in-app:**
+- [x] Sino no header com badge roxo (máx "9+") para não lidas
+- [x] Dropdown com lista das últimas 20 notificações
+- [x] "Marcar todas como lidas" no header do dropdown
+- [x] Realtime via Supabase `postgres_changes` — badge atualiza sem reload
+- [x] Geração automática de `memory_tag` ao salvar memória com usuário marcado
+- [x] Aceite/recusa de marcações e convites de grupo diretamente do dropdown
+
+**Grupos:**
+- [x] Página `/groups` — lista de grupos do usuário com contadores
+- [x] Página `/groups/[id]` — memórias e membros do grupo, abas separadas
+- [x] Criar grupo (`GroupCreateSheet`): emoji + nome
+- [x] Configurar grupo (`GroupConfigSheet`): editar nome/emoji (admin), sair, deletar
+- [x] Adicionar memória ao grupo (`AddMemoryToGroupSheet`): busca e picker de memórias
+- [x] Convidar membro (`InviteMemberSheet`): busca em profiles, envia `group_invite`
+- [x] Remover membro (admin), remover memória do grupo (sem excluir a memória original)
+- [x] Notificação `group_new_memory` enviada a todos os membros ao adicionar memória
+
+**Co-autoria via memory_members:**
+- [x] `memory_tag` insere/atualiza `memory_members` ao aceitar convite
+- [x] RLS permite que accepted members vejam a memória no calendário
+
+**Indicadores visuais de grupos:**
+- [x] Badge 👥 (9px) no emoji da memória nos cards recentes quando pertence a grupo
+- [x] Ponto roxo (5px) no canto do dia no calendário quando há memória em grupo
+- [x] Seção "Grupos" somente-leitura no sheet de edição da memória
+
+---
+
+### 🔲 FASE 3 — Enriquecimento e Inteligência
+
+**Objetivo:** memórias mais ricas com mídia, contexto e inteligência temporal.
+
+- [ ] **Upload de fotos** — estilo Polaroid, armazenamento no Supabase Storage, máx. 5 por memória
+- [ ] **Integração Spotify API** — busca de faixas com preview de 30s, salva `spotify_track_id`
+- [ ] **Integração Google Maps API** — autocomplete de localização com coordenadas reais
+- [ ] **"On This Day" / Replay do Dia** — notificação diária `on_this_day` para memórias de anos anteriores naquela data
+- [ ] **Resumo mensal automático** — gerado no último dia do mês: top mood, pessoa mais marcada, quantidade de memórias
+- [ ] **Resumo anual** — retrospectiva de dezembro com highlights do ano
+- [ ] **Exportação PDF** — memórias do mês/ano formatadas
+- [ ] **Exportação JSON** — backup completo das memórias do usuário
+
+---
+
+### 🔲 FASE 4 — Produção e Mobile
+
+**Objetivo:** app confiável e acessível em qualquer dispositivo, qualquer hora.
+
+- [ ] **Deploy** — domínio próprio, hosting estável (Vercel ou similar)
+- [ ] **CI/CD** — GitHub Actions: lint, build e deploy automático no push para main
+- [ ] **App mobile React Native + Expo** — compartilha lógica de dados com a versão web
+- [ ] **Push notifications** — lembrete diário para registrar o dia, "On This Day"
+- [ ] **Onboarding** — fluxo guiado para novos usuários (primeira memória, grupos, configurações)
+- [ ] **Suporte offline básico** — PWA com cache local, sincronização ao reconectar
+
+---
+
+### 🔲 FASE 5 — Monetização
+
+**Objetivo:** modelo sustentável sem prejudicar a experiência core.
+
+- [ ] **Plano gratuito** — limites: X memórias/mês, sem fotos, sem exportação, 1 grupo
+- [ ] **Plano premium** — ilimitado: memórias, grupos, fotos, exportação PDF/JSON, Spotify
+- [ ] **Gift** — presentear 1 mês premium para um amigo diretamente pelo app
+
+---
+
 ## Changelog
 
-### 2026-04-26 — v0.4.0 · Pessoas reais + notificações in-app
+### 2026-04-26 — v0.4.0 · Social e Compartilhamento
 
-**Migration 002 — Fase 3: compartilhamento, grupos e notificações**
-- `memory_members` — papel de cada usuário em uma memória (owner/contributor/viewer), com `invited_by` e `accepted_at` nullable (NULL = convite pendente), UNIQUE `(memory_id, user_id)`
-- `groups` — grupos com `name`, `emoji`, `created_by`, trigger `updated_at` automático
+**Migration 002 — compartilhamento, grupos e notificações**
+- `memory_members` — papel por memória (owner/contributor/viewer), `invited_by`, `accepted_at` nullable, UNIQUE `(memory_id, user_id)`
+- `groups` — `name`, `emoji`, `created_by`, trigger `updated_at` automático
 - `group_members` — role admin/member por grupo, UNIQUE `(group_id, user_id)`
 - `group_memories` — vínculo memória ↔ grupo, UNIQUE `(group_id, memory_id)`
 - `notifications` — tipos: `memory_tag`, `group_invite`, `group_new_memory`, `on_this_day`; campos: `user_id`, `type`, `memory_id?`, `group_id?`, `from_user_id?`, `meta jsonb`, `read_at?`
 - RLS completo em todas as tabelas; policy `"Users can manage own memories"` substituída por 4 granulares
-- `create_group_with_admin(name, emoji)` — função helper atômica (`SECURITY DEFINER`)
+- `create_group_with_admin(p_name, p_emoji)` — função helper atômica (`SECURITY DEFINER`)
 - Realtime habilitado na tabela `notifications`
 
-**Migration 003 — Perfis públicos + user_id em pessoas**
-- `profiles` — tabela pública com `display_name`, `avatar_url`, `email`; trigger `on_auth_user_created` popula automaticamente no signup; backfill de usuários existentes
+**Migration 003 — perfis públicos + user_id em pessoas**
+- `profiles` — tabela pública com `display_name`, `avatar_url`, `email`; trigger `on_auth_user_created`; backfill de usuários existentes
 - `memory_people.user_id` — coluna nullable para vincular pessoa a usuário real
 
 **Campo de pessoas com autocomplete de usuários reais**
 - Busca em `profiles` com debounce 300ms ao digitar 2+ caracteres
 - Dropdown rico: avatar circular (foto ou inicial), nome, email
-- Opção "Adicionar como texto livre" sempre disponível no final do dropdown
+- Opção "Adicionar como texto livre" sempre disponível
 - Chip roxo com ícone de link para usuários vinculados; chip padrão para texto livre
 - Navegação por teclado (↑↓ Enter Tab Escape)
 - Histórico local (1 char) preservado como fallback
 
 **Notificações in-app**
-- Sino na sidebar com badge roxo (máx "9+") para não lidas
+- Sino no header com badge roxo (máx "9+") para não lidas
 - Dropdown 320px com lista das últimas 20 notificações
 - Textos por tipo: `memory_tag`, `group_invite`, `group_new_memory`, `on_this_day`
 - Item não lido: fundo roxo sutil + bolinha indicadora
 - "Marcar todas como lidas" no header do dropdown
 - Realtime via Supabase `postgres_changes` — badge e lista atualizam sem reload
-- Geração automática de `memory_tag` ao salvar memória com usuário marcado (apenas recém-adicionados, nunca para si mesmo)
+- Geração automática de `memory_tag` ao salvar memória com usuário marcado
+- Aceite/recusa de marcações e convites diretamente do dropdown
+
+**Grupos (frontend completo)**
+- `/groups` — lista de grupos com contadores de membros e memórias
+- `/groups/[id]` — abas Memórias / Membros, header global adaptado
+- `GroupCreateSheet` — emoji picker + nome, chama `create_group_with_admin`
+- `GroupConfigSheet` — editar nome/emoji (admin), sair do grupo, deletar grupo (owner)
+- `AddMemoryToGroupSheet` — busca local, INSERT em `group_memories`, notificação automática
+- `InviteMemberSheet` — busca em profiles, envia notificação `group_invite`
+- Remover membro (admin), remover memória do grupo (sem excluir a original)
+- Indicadores visuais: badge 👥 em cards recentes, ponto roxo no calendário, seção "Grupos" no sheet
 
 ---
 
 ### 2026-04-24 — v0.3.0 · Sheet lateral, emoji-mart, dark mode polish
 
 **Editor em sheet lateral**
-- Editor de memória migrado de tela cheia para sheet deslizante (480px da direita no desktop, base no mobile)
+- Editor migrado de tela cheia para sheet deslizante (480px da direita no desktop, base no mobile)
 - Overlay com backdrop-blur, fecha ao clicar fora ou pressionar Escape
 - Animação `translateX` no desktop e `translateY` no mobile
-- Fix crítico: `useEffect` dividido em dois (overflow em `[]`, Escape em `[onClose]`) para evitar body overflow travado ao fechar
 
 **Mood picker expandido**
-- Integração com emoji-mart v5 (`@emoji-mart/data` + `@emoji-mart/react`) para seleção de qualquer emoji
-- 16 emojis padrão com labels + botão "+" que abre o picker completo
+- Integração emoji-mart v5 para seleção de qualquer emoji
+- 16 emojis padrão + botão "+" que abre o picker completo
 - Banner de mood na parte superior do sheet (120px, emoji 52px, gradiente por mood)
 - Tipo `Mood` alterado de union estrita para `string` para suportar qualquer emoji
 
 **Calendário com diferenciação visual por mood**
-- Hoje: fundo translúcido roxo + borda `rgba(155,143,255,0.4)`, texto `#9B8FFF`
-- Início/fim de range salvo: fundo sólido `#9B8FFF`, texto escuro `#0D0D0F` (destaque forte)
-- Memória simples: fundo translúcido na cor do mood, texto na cor do mood
-- Mid-range: texto `#C4BEFF` (sutil, sem fundo)
-- `moodMap` e `ranges` enriquecidos com mood passados como props para o Calendar
+- Hoje: fundo translúcido roxo + borda, texto `#9B8FFF`
+- Início/fim de range salvo: fundo sólido `#9B8FFF`, texto escuro
+- Memória simples: fundo e texto na cor do mood
 - `MOOD_COLORS` record com mapeamento emoji → `{bg, text}`
 
 **Autocomplete customizado**
 - Autocomplete de músicas buscando histórico do Supabase (`memory_music`)
-- Dropdown customizado via CSS (`.field-ac-wrapper`, `.custom-dropdown`, `.dropdown-item`) sem depender do nativo do browser
-- `autoComplete="off"` + `autoCorrect="off"` + `spellCheck={false}` em todos os inputs
+- Dropdown customizado via CSS sem depender do nativo do browser
 
 **Login redesenhado**
-- Layout two-column: painel visual esquerdo com gradiente + 3 floating cards animados; painel do form direito (400px)
+- Layout two-column: painel visual esquerdo com gradiente + floating cards animados
 - Mobile: painel visual vira header de 40vh
-- Animação `float` com `keyframes` diferente para cada card
 
 **Busca com sugestões**
 - Estado vazio substituído por chips de sugestão: top pessoas, tags recentes, músicas recentes
-- Sugestões calculadas com `useMemo` a partir de todas as memórias
-
-**Stats com cores por mood**
-- Barras de mood usam `MOOD_COLORS[mood]` por emoji, eliminando cor única
 
 **Dark mode polish**
-- Textarea: fundo `rgba(80,80,100,0.35) !important` — azul-cinza sólido para contraste independente do painel
-- Fundo do sheet: `#16161F` (era `#0F0F14`)
-- Emojis: `opacity: 0.8`, `filter: brightness(1.15)` — removida dessaturação
-- Seção de campos: `background: rgba(255,255,255,0.02)`, separadores `rgba(255,255,255,0.06)`
-- Ícones de campo: `#9B8FFF` com `opacity: 0.65`
-- Botão deletar: `color: #E24B4A`, `opacity: 0.7` → hover `1`
+- Textarea: fundo `rgba(80,80,100,0.35)` para contraste independente do painel
+- Fundo do sheet: `#16161F`, emojis com `opacity: 0.8` e `filter: brightness(1.15)`
 
 ---
 
-### 2026-04-15 — v0.2.0 · Design system dark intimate + UX/UI
+### 2026-04-15 — v0.2.0 · Design system dark intimate + layout web responsivo
 
 **Design system completo**
-- Paleta de cores via CSS variables: modo escuro (`--bg-base: #0D0D0F`) e claro (`--bg-base: #F5F4F0`)
-- Tipografia: Inter (Google Fonts), classes utilitárias `.screen-title`, `.meta-label`, `.date-display`
-- Scrollbar customizada, transições suaves globais, foco acessível com `--accent-purple`
-- Tailwind extendido com tokens `vault.*` mapeados para as variáveis
+- Paleta de cores via CSS variables: modo escuro (`--bg-base: #0D0D0F`) e claro
+- Tipografia Inter, classes utilitárias `.screen-title`, `.meta-label`, `.date-display`
+- Scrollbar customizada, transições suaves, foco acessível com `--accent-purple`
 
 **Layout responsivo web-first**
-- Sidebar fixa (220px) visível em `lg:`, com logo "COFRE DE MEMÓRIAS" em estilo meta-label
-- Bottom nav só no mobile (`lg:hidden`), ícones SVG com ponto indicador no item ativo
+- Sidebar fixa (220px) visível em `lg:`, bottom nav só no mobile
 - Header sticky com fundo `--bg-base` em todas as telas
-
-**Tela principal — duas colunas**
-- Coluna esquerda: calendário (max 560px), coluna direita: memórias recentes (320px, sticky)
-- Em mobile/tablet: coluna única, memórias abaixo do calendário
-- Scroll com mouse corrigido: removido `overflow-x: hidden` do `html`, wrappers sem `min-h-screen`
-
-**Editor de memória (MemoryModal)**
-- Textarea auto-resize via `scrollHeight`, min-height 120px, fonte 15px/1.7, placeholder em `--text-muted`
-- Campos compactos: altura 44px, `align-items: center`, ícone 16px
-- `ChipField` para pessoas/tags: cresce verticalmente só quando há chips
-
-**Tela de estatísticas**
-- Layout duas colunas (max-width 1100px): esquerda (mood), direita (pessoas + tags)
-- Grid de métricas 2×2 mobile → 4×1 desktop
+- Duas colunas na home: calendário (max 560px) + memórias recentes (320px, sticky)
 
 **Sidebar — menu de usuário**
-- Avatar com iniciais, nome formatado ("Jean L."), chevron
-- Popover acima com: toggle tema (sol/lua) + logout
-- Fecha ao clicar fora via `mousedown` listener
+- Avatar com iniciais, nome formatado, chevron
+- Popover com toggle tema (sol/lua) + logout
 
 ---
 
 ### 2026-04-14 — v0.1.0 · Fundação
-- Projeto Next.js 14 criado com TypeScript, Tailwind e PWA (next-pwa)
-- Manifest PWA: nome "Cofre de Memórias", short_name "Vault", display standalone, tema escuro
+
+- Projeto Next.js 14 com TypeScript, Tailwind e PWA (next-pwa)
 - Supabase configurado: Auth com Google OAuth, banco de dados criado
 - Tabelas: `memories`, `memory_music`, `memory_people`, `memory_tags`, `collections`, `collection_memories`
-- RLS (Row Level Security) ativo em todas as tabelas
-- Middleware de autenticação (redireciona para /login se não autenticado)
-- **Calendário mensal** navegável com destaque nos dias com memórias
-- **Modal de memória** full-screen com: texto, mood (emoji), música, local, @pessoas, #tags, fixar
-- **Bottom navigation**: Calendário, Fixadas, Busca, Stats
-- Página de **Fixadas**: lista memórias com is_pinned = true
-- Página de **Busca**: full-text search nas memórias
-- Página de **Stats**: total, mês atual, sequência de dias, top moods, tags e pessoas
-- Redesign completo: tema claro/escuro com toggle, persistido no localStorage
-- Logout via menu no header
-- Fix: calendário agora renderiza todas as semanas do mês (bug do aspect-square corrigido)
+- RLS ativo em todas as tabelas, middleware de autenticação
+- Calendário mensal navegável com destaque nos dias com memórias
+- Modal de memória com: texto, mood, música, local, @pessoas, #tags, fixar
+- Bottom navigation: Calendário, Fixadas, Busca, Stats
+- Páginas: Fixadas, Busca, Stats
 
 ---
 
@@ -151,62 +240,24 @@
 | Funcionalidade | Status |
 |---|---|
 | Login com Google OAuth | ✅ |
-| Logout | ✅ |
-| Calendário mensal navegável | ✅ |
-| Drag para selecionar range de datas | ✅ |
-| Criar memória por dia | ✅ |
-| Editar memória existente | ✅ |
-| Excluir memória | ✅ |
-| Campo: texto livre | ✅ |
-| Campo: mood (qualquer emoji via emoji-mart) | ✅ |
-| Campo: música com autocomplete do histórico | ✅ |
-| Campo: localização | ✅ |
-| Campo: @pessoas | ✅ |
-| Campo: #tags | ✅ |
-| Fixar memória (pin) | ✅ |
-| Página de fixadas | ✅ |
-| Busca por texto | ✅ |
-| Sugestões na busca (pessoas, tags, músicas) | ✅ |
-| Estatísticas: total, mês, sequência | ✅ |
-| Estatísticas: top moods (cores por mood), tags, pessoas | ✅ |
-| Calendário com diferenciação visual por mood | ✅ |
+| CRUD de memórias | ✅ |
+| Calendário mensal com drag para ranges | ✅ |
+| Diferenciação visual por mood no calendário | ✅ |
+| Sheet lateral de edição | ✅ |
+| Mood com emoji-mart (qualquer emoji) | ✅ |
+| Música com autocomplete do histórico | ✅ |
+| @Pessoas com autocomplete de perfis reais | ✅ |
+| #Tags com autocomplete | ✅ |
+| Fixar memórias | ✅ |
+| Busca full-text com sugestões | ✅ |
+| Estatísticas (total, mês, sequência, mood, tags, pessoas) | ✅ |
 | Tema claro / escuro | ✅ |
 | PWA instalável | ✅ |
-| Proteção por autenticação | ✅ |
-
----
-
-## Backlog
-
-### Alta prioridade
-- [ ] Upload de fotos/imagens nas memórias
-- [ ] Visualização de memória em modo leitura (sem abrir o editor)
-- [ ] Swipe para navegar entre dias com memória
-
-### Média prioridade
-- [ ] Coleções: agrupar memórias por tema/evento
-- [ ] Busca por tag, pessoa ou localização (além de texto)
-- [ ] Filtro de período na busca
-- [ ] Compartilhar memória (gerar imagem para stories)
-- [ ] Notificação push: lembrete diário para registrar o dia
-- [ ] Ícones PWA personalizados (substituir placeholder)
-
-### Fase 3 — Compartilhamento e grupos
-- [x] Schema: `memory_members`, `groups`, `group_members`, `group_memories`, `notifications`
-- [x] RLS completo em todas as tabelas de compartilhamento
-- [x] Função `create_group_with_admin()`
-- [x] Tabela `profiles` com trigger de auto-populate
-- [x] Autocomplete de usuários reais no campo de pessoas
-- [x] Notificações in-app com realtime e badge
-- [x] Geração automática de `memory_tag`
-- [ ] Frontend: convidar usuário para memória (memory_members)
-- [ ] Frontend: criar e gerenciar grupos
-- [ ] Notificação "Neste dia X anos atrás" (on_this_day)
-
-### Baixa prioridade / Futuro
-- [ ] Exportar memórias (PDF ou JSON)
-- [ ] Mapa com localização das memórias
-- [ ] Retrospectiva mensal automática
+| Notificações in-app com Realtime | ✅ |
+| Aceite/recusa de marcações e convites | ✅ |
+| Grupos (criar, configurar, membros, memórias) | ✅ |
+| Indicadores visuais de grupos no calendário e cards | ✅ |
+| Seção "Grupos" somente-leitura no editor de memória | ✅ |
 
 ---
 
@@ -216,11 +267,12 @@
 |---|---|---|
 | Framework | Next.js 14 App Router | SSR + performance mobile |
 | Auth | Supabase Auth + Google OAuth | Zero fricção para o usuário |
-| Banco | Supabase (PostgreSQL) | RLS nativo, realtime disponível |
+| Banco | Supabase (PostgreSQL) | RLS nativo, Realtime disponível |
 | Estilo | Tailwind CSS + dark: class | Tema claro/escuro sem library extra |
 | Emojis | emoji-mart v5 | Picker completo + tree-shakeable |
 | PWA | next-pwa | Integração direta com Next.js |
 | Datas | date-fns + ptBR locale | Leve, tree-shakeable |
+| Navegação de cards | Next.js `<Link>` | Navegação via âncora nativa, sem dependência de handler JS |
 
 ---
 
@@ -228,7 +280,7 @@
 
 | Data | O que foi feito |
 |---|---|
-| 2026-04-26 | v0.4.0 — autocomplete de usuários reais, notificações in-app com realtime, migrations 002/003; fix recursão infinita em memory_members_select |
+| 2026-04-26 | v0.4.0 — Fase 2 completa: grupos, notificações, aceite/recusa, indicadores visuais, fixes de header e navegação |
 | 2026-04-24 | Sheet lateral, emoji-mart, autocomplete de músicas, calendar mood colors, login redesign, dark mode polish |
-| 2026-04-15 | Design system dark intimate, layout web responsivo, sidebar com menu de usuário, UX/UI ajustes |
+| 2026-04-15 | Design system dark intimate, layout web responsivo, sidebar com menu de usuário |
 | 2026-04-14 | Setup completo, Supabase configurado, OAuth funcional, redesign visual, fix calendário |

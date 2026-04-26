@@ -22,6 +22,7 @@ interface CalendarProps {
   pinnedDates?: Set<string>;
   ranges?: Array<{ start: string; end: string; mood?: string | null }>;
   moodMap?: Map<string, string | null>;
+  groupDates?: Set<string>;
   onMonthChange: (date: Date) => void;
   onDayPress: (date: Date) => void;
   onRangeSelect?: (start: Date, end: Date) => void;
@@ -63,6 +64,7 @@ export default function Calendar({
   pinnedDates = new Set(),
   ranges = [],
   moodMap = new Map(),
+  groupDates,
   onMonthChange,
   onDayPress,
   onRangeSelect,
@@ -287,6 +289,7 @@ export default function Calendar({
 
           // Dot: show for regular memories (not mid-range) and range endpoints
           const hasDot = (hasMemory && !isMidRange) || isSavedEndpoint;
+          const inGroupDate = hasMemory && !!groupDates?.has(dateKey);
           const dotColor = isT
             ? 'rgba(13,13,15,0.45)'
             : isPinned
@@ -330,6 +333,17 @@ export default function Calendar({
                   <span
                     className="absolute bottom-1 w-1 h-1 rounded-full"
                     style={{ background: dotColor }}
+                  />
+                )}
+                {inGroupDate && (
+                  <span
+                    className="absolute"
+                    style={{
+                      top: '4px', right: '4px',
+                      width: '5px', height: '5px', borderRadius: '50%',
+                      background: 'var(--accent-purple)', opacity: 0.75,
+                      border: '1.5px solid var(--bg-base)',
+                    }}
                   />
                 )}
               </button>

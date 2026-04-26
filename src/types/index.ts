@@ -94,8 +94,8 @@ export interface GroupMember {
 export interface GroupMemoryItem {
   id: string;
   memory_id: string;
-  posted_by: string;
-  posted_at: string;
+  added_by: string;
+  added_at: string;
   memory: Memory;
   poster_name: string | null;
   poster_avatar: string | null;

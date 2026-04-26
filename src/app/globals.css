@@ -1456,6 +1456,8 @@ p.page-subtitle {
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+  text-decoration: none;
+  color: inherit;
   transition: box-shadow 0.2s ease, transform 0.1s ease;
 }
 

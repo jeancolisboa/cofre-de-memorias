@@ -13,6 +13,7 @@ import InviteMemberSheet from '@/components/InviteMemberSheet';
 import { createClient } from '@/lib/supabase/client';
 import type { Group, GroupMember, GroupMemoryItem, MemoryFormData } from '@/types';
 import { ChevronLeft, Settings, Plus, Clock, MapPin, Star, X } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 type Tab = 'memories' | 'members';
 
@@ -82,13 +83,13 @@ export default function GroupDetailPage() {
     // 4. Memórias do grupo
     const { data: gmRows } = await supabase
       .from('group_memories')
-      .select('id, memory_id, posted_by, posted_at')
+      .select('id, memory_id, added_by, added_at')
       .eq('group_id', id)
-      .order('posted_at', { ascending: false });
+      .order('added_at', { ascending: false });
 
     if (gmRows && gmRows.length > 0) {
       const memoryIds = gmRows.map(r => r.memory_id);
-      const postedByIds = Array.from(new Set(gmRows.map(r => r.posted_by)));
+      const postedByIds = Array.from(new Set(gmRows.map(r => r.added_by)));
 
       const [{ data: memData }, { data: posterProfiles }] = await Promise.all([
         supabase.from('memories')
@@ -106,12 +107,12 @@ export default function GroupDetailPage() {
         .map(gm => {
           const rawMem = memMap.get(gm.memory_id);
           if (!rawMem) return null;
-          const poster = posterMap.get(gm.posted_by);
+          const poster = posterMap.get(gm.added_by);
           return {
             id: gm.id,
             memory_id: gm.memory_id,
-            posted_by: gm.posted_by,
-            posted_at: gm.posted_at,
+            added_by: gm.added_by,
+            added_at: gm.added_at,
             memory: {
               ...rawMem,
               people: rawMem.memory_people,
@@ -188,6 +189,16 @@ export default function GroupDetailPage() {
     await fetchGroupData();
   }, [selectedGM, userId, supabase, fetchGroupData]);
 
+  const handleRemoveFromGroup = useCallback(async () => {
+    if (!selectedGM) return;
+    await supabase.from('group_memories')
+      .delete()
+      .eq('group_id', id)
+      .eq('memory_id', selectedGM.memory.id);
+    setSelectedGM(null);
+    await fetchGroupData();
+  }, [selectedGM, supabase, id, fetchGroupData]);
+
   function getInitial(name: string | null): string {
     return ((name ?? '?')[0]).toUpperCase();
   }
@@ -210,50 +221,81 @@ export default function GroupDetailPage() {
       <Sidebar />
 
       <main className="flex-1 lg:ml-[220px]">
-        {/* Header */}
+        {/* Header — padrão global */}
         <header
           className="sticky top-0 z-30"
-          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
+          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)', position: 'relative' }}
         >
-          <div className="flex items-center gap-3 px-4 lg:px-6 pt-14 lg:pt-0 py-3">
-            <button
-              onClick={() => router.push('/groups')}
-              className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+          <div className="px-4 lg:px-8 pt-14 lg:pt-8 pb-3 flex items-center justify-between">
+
+            {/* ── ESQUERDA ── */}
+            <div className="flex items-center gap-2">
+              {/* Botão ← sempre visível */}
+              <button
+                onClick={() => router.push('/groups')}
+                className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              {/* Mobile: sino logo após o ← */}
+              <div className="lg:hidden">
+                <NotificationBell />
+              </div>
+
+              {/* Desktop: emoji + nome + subtítulo */}
+              <div className="hidden lg:flex items-center gap-3">
+                <span style={{ fontSize: '26px', lineHeight: 1, flexShrink: 0 }}>{group.emoji}</span>
+                <div>
+                  <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>{group.name}</h1>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                    {members.length} {members.length === 1 ? 'membro' : 'membros'} · {groupMemories.length} {groupMemories.length === 1 ? 'memória' : 'memórias'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── CENTRO: Mobile — título do grupo ── */}
+            <div
+              className="lg:hidden flex items-center gap-1.5 pointer-events-none"
+              style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
             >
-              <ChevronLeft size={18} />
-            </button>
-
-            <span style={{ fontSize: '26px', lineHeight: 1, flexShrink: 0 }}>{group.emoji}</span>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2, margin: 0 }}>
+              <span style={{ fontSize: '20px', lineHeight: 1, flexShrink: 0 }}>{group.emoji}</span>
+              <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
                 {group.name}
-              </h1>
-              <span style={{
-                display: 'inline-block',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 7px',
-                borderRadius: '20px',
-                marginTop: '3px',
-                background: isAdmin ? 'rgba(155,143,255,0.12)' : 'rgba(255,255,255,0.06)',
-                color: isAdmin ? 'var(--accent-purple)' : 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}>
-                {isAdmin ? 'Admin' : 'Membro'}
               </span>
             </div>
 
-            <button
-              onClick={() => setShowConfig(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-              title="Configurações"
-            >
-              <Settings size={16} />
-            </button>
+            {/* ── DIREITA ── */}
+            <div className="flex items-center gap-2">
+              {/* Desktop: sino + gerenciar (admin) */}
+              <div className="hidden lg:flex items-center gap-2">
+                <NotificationBell />
+                {isAdmin && (
+                  <button className="new-memory-btn" onClick={() => setShowConfig(true)}>
+                    <Settings size={14} />
+                    Gerenciar
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile: ⚙ para admin, spacer para membro */}
+              <div className="lg:hidden">
+                {isAdmin ? (
+                  <button
+                    className="w-11 h-11 flex items-center justify-center rounded-full"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+                    onClick={() => setShowConfig(true)}
+                    title="Gerenciar grupo"
+                  >
+                    <Settings size={18} />
+                  </button>
+                ) : (
+                  <div style={{ width: 44 }} />
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Abas */}
@@ -322,7 +364,7 @@ export default function GroupDetailPage() {
                     {gm.memory.is_pinned && <Star size={11} style={{ color: 'var(--accent-amber)', fill: 'var(--accent-amber)' }} />}
                   </p>
                   <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0 }}>
-                    Postado por {gm.poster_name ?? 'alguém'} · {format(new Date(gm.posted_at), "d MMM", { locale: ptBR })}
+                    Postado por {gm.poster_name ?? 'alguém'} · {format(new Date(gm.added_at), "d MMM", { locale: ptBR })}
                   </p>
                 </div>
               </button>
@@ -479,7 +521,8 @@ export default function GroupDetailPage() {
           memory={selectedGM.memory}
           onClose={() => setSelectedGM(null)}
           onSave={handleMemorySave}
-          onDelete={selectedGM.memory.user_id === userId ? handleMemoryDelete : undefined}
+          onDelete={handleRemoveFromGroup}
+          deleteLabel="Remover do grupo"
         />
       )}
     </div>

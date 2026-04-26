@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import Sidebar from '@/components/Sidebar';
 import NotificationBell from '@/components/NotificationBell';
@@ -129,9 +130,9 @@ export default function GroupsPage() {
 
           <div className="space-y-3">
             {groups.map(group => (
-              <button
+              <Link
                 key={group.id}
-                onClick={() => router.push(`/groups/${group.id}`)}
+                href={`/groups/${group.id}`}
                 className="group-card"
               >
                 <span style={{ fontSize: '40px', lineHeight: 1, flexShrink: 0 }}>{group.emoji}</span>
@@ -147,7 +148,7 @@ export default function GroupsPage() {
                   </p>
                 </div>
                 <ChevronRight size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-              </button>
+              </Link>
             ))}
           </div>
         </div>
