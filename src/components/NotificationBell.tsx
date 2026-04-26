@@ -86,10 +86,10 @@ async function enrichWithProfiles(
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function NotificationBell() {
-  const [open, setOpen]           = useState(false);
-  const [notifs, setNotifs]       = useState<NotifItem[]>([]);
-  const [loading, setLoading]     = useState(false);
-  const [dropdownTop, setDropdownTop] = useState(0);
+  const [open, setOpen]             = useState(false);
+  const [notifs, setNotifs]         = useState<NotifItem[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
 
   const bellRef  = useRef<HTMLDivElement>(null);
   const router   = useRouter();
@@ -164,7 +164,10 @@ export default function NotificationBell() {
   const handleOpen = () => {
     if (bellRef.current) {
       const rect = bellRef.current.getBoundingClientRect();
-      setDropdownTop(rect.top);
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
     }
     setOpen((v) => !v);
   };
@@ -205,27 +208,22 @@ export default function NotificationBell() {
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Bell button — fica dentro do nav da sidebar */}
-      <div ref={bellRef} className="px-3">
+      {/* Bell button — fica no header */}
+      <div ref={bellRef}>
         <button
           onClick={handleOpen}
-          className="w-full flex items-center gap-3 py-2.5 rounded-xl"
+          className="w-9 h-9 flex items-center justify-center rounded-full relative"
           style={{
-            paddingLeft: '20px',
-            paddingRight: '12px',
-            color: open ? 'var(--accent-purple)' : 'var(--text-nav-inactive)',
-            background: 'transparent',
+            background: open ? 'color-mix(in srgb, var(--accent-purple) 12%, transparent)' : 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            color: open ? 'var(--accent-purple)' : 'var(--text-secondary)',
           }}
+          title="Notificações"
         >
-          <div className="relative flex-shrink-0">
-            <Bell size={16} strokeWidth={open ? 2 : 1.5} />
-            {badgeLabel && (
-              <span className="notif-badge">{badgeLabel}</span>
-            )}
-          </div>
-          <span style={{ fontSize: '14px', fontWeight: open ? 500 : 400 }}>
-            Notificações
-          </span>
+          <Bell size={20} strokeWidth={1.5} />
+          {badgeLabel && (
+            <span className="notif-badge">{badgeLabel}</span>
+          )}
         </button>
       </div>
 
@@ -234,11 +232,11 @@ export default function NotificationBell() {
         <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
       )}
 
-      {/* Dropdown */}
+      {/* Dropdown — ancorado abaixo do sino, alinhado à direita */}
       {open && (
         <div
           className="notif-dropdown"
-          style={{ top: dropdownTop, left: '228px' }}
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
         >
           {/* Header */}
           <div className="notif-dropdown-header">

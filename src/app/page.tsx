@@ -12,6 +12,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
 import type { Memory, MemoryFormData } from '@/types';
 import { Plus, Sun, Moon, LogOut, Clock, Star, MapPin, ChevronRight } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function HomePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -235,13 +236,16 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-2 relative">
-            <button
-              className="new-memory-btn hidden lg:flex"
-              onClick={() => { setSelectedDate(new Date()); setSelectedMemory(null); }}
-            >
-              <Plus size={14} />
-              Nova memória
-            </button>
+            <div className="hidden lg:flex items-center gap-2">
+              <NotificationBell />
+              <button
+                className="new-memory-btn"
+                onClick={() => { setSelectedDate(new Date()); setSelectedMemory(null); }}
+              >
+                <Plus size={14} />
+                Nova memória
+              </button>
+            </div>
 
             <button
               onClick={toggle}
