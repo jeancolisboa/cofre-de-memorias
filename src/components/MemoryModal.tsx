@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useCallback, KeyboardEvent, useMemo } from
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { createClient } from '@/lib/supabase/client';
-import type { Memory, MemoryFormData, Mood } from '@/types';
-import { X, Star, Music, MapPin, Users, Tag } from 'lucide-react';
+import type { Memory, MemoryFormData, Mood, PersonEntry } from '@/types';
+import { X, Star, Music, MapPin, Tag } from 'lucide-react';
+import PeopleField from '@/components/PeopleField';
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 
@@ -69,15 +70,15 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   );
   const [location, setLocation] = useState(memory?.location ?? '');
   const [isPinned, setIsPinned] = useState(memory?.is_pinned ?? false);
-  const [personInput, setPersonInput] = useState('');
   const [tagInput, setTagInput] = useState('');
-  const [people, setPeople] = useState<string[]>(memory?.people?.map((p) => p.name) ?? []);
+  const [people, setPeople] = useState<PersonEntry[]>(
+    memory?.people?.map((p) => ({ name: p.name, user_id: p.user_id ?? null })) ?? []
+  );
   const [tags, setTags] = useState<string[]>(memory?.tags?.map((t) => t.tag) ?? []);
   const [endDate] = useState<string | null>(memory?.end_date ?? initialEndDate ?? null);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [personFocused, setPersonFocused] = useState(false);
   const [tagFocused, setTagFocused] = useState(false);
   const [showMusicAC, setShowMusicAC] = useState(false);
 
@@ -154,21 +155,10 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
     setShowMusicAC(suggestedMusics.length > 0);
   };
 
-  const addPerson = (name?: string) => {
-    const n = (name ?? personInput).trim().replace(/^@/, '');
-    if (n && !people.includes(n)) setPeople((p) => [...p, n]);
-    if (!name) setPersonInput('');
-  };
-
   const addTag = (tag?: string) => {
     const t = (tag ?? tagInput).trim().replace(/^#/, '');
     if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
     if (!tag) setTagInput('');
-  };
-
-  const handlePersonKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addPerson(); }
-    if (e.key === 'Backspace' && personInput === '') setPeople((p) => p.slice(0, -1));
   };
 
   const handleTagKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -193,10 +183,6 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
     try { await onDelete(); onClose(); }
     finally { setSaving(false); }
   };
-
-  const peopleSuggestions = suggestedPeople.filter(
-    (s) => !people.includes(s) && s.toLowerCase().includes(personInput.toLowerCase())
-  ).slice(0, 5);
 
   const tagSuggestions = suggestedTags.filter(
     (s) => !tags.includes(s) && s.toLowerCase().includes(tagInput.replace(/^#/, '').toLowerCase())
@@ -378,51 +364,12 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
               />
             </div>
 
-            {/* People — autocomplete customizado */}
-            <div className="relative">
-              <div className="field-row">
-                <div className="field-icon"><Users size={15} /></div>
-                <div className="chips-inline">
-                  {people.map((p) => (
-                    <span key={p} className="chip-person">
-                      {p}
-                      <button onClick={() => setPeople((prev) => prev.filter((x) => x !== p))}>
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))}
-                  <div className="field-ac-wrapper">
-                    <input
-                      type="text"
-                      value={personInput}
-                      onChange={(e) => setPersonInput(e.target.value)}
-                      onKeyDown={handlePersonKey}
-                      onFocus={() => setPersonFocused(true)}
-                      onBlur={() => { setTimeout(() => setPersonFocused(false), 150); addPerson(); }}
-                      placeholder={people.length === 0 ? '+ Adicionar pessoa' : ''}
-                      className="chip-input"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                    />
-                    {personFocused && peopleSuggestions.length > 0 && (
-                      <div className="custom-dropdown">
-                        {peopleSuggestions.map((s) => (
-                          <button
-                            key={s}
-                            className="dropdown-item"
-                            onMouseDown={(e) => { e.preventDefault(); addPerson(s); }}
-                          >
-                            <Users size={12} />
-                            @{s}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* People — autocomplete com busca de usuários reais */}
+            <PeopleField
+              value={people}
+              onChange={setPeople}
+              historySuggestions={suggestedPeople}
+            />
 
             {/* Tags — autocomplete customizado */}
             <div className="relative">

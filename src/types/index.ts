@@ -1,5 +1,18 @@
 export type Mood = string;
 
+export interface Profile {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+}
+
+/** Entrada no campo de pessoas: usuário real (user_id preenchido) ou texto livre (user_id null) */
+export interface PersonEntry {
+  name: string;
+  user_id: string | null;
+}
+
 export interface Memory {
   id: string;
   user_id: string;
@@ -30,6 +43,7 @@ export interface MemoryPerson {
   id: string;
   memory_id: string;
   name: string;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -61,7 +75,7 @@ export interface MemoryFormData {
   mood: Mood | null;
   music: string;
   location: string;
-  people: string[];
+  people: PersonEntry[];
   tags: string[];
   is_pinned: boolean;
   end_date: string | null; // YYYY-MM-DD, null = single day

@@ -151,7 +151,29 @@ export default function HomePage() {
 
     await supabase.from('memory_people').delete().eq('memory_id', memoryId);
     if (formData.people.length > 0)
-      await supabase.from('memory_people').insert(formData.people.map((name) => ({ memory_id: memoryId, name })));
+      await supabase.from('memory_people').insert(
+        formData.people.map((p) => ({ memory_id: memoryId, name: p.name, user_id: p.user_id }))
+      );
+
+    // Gera memory_tag somente para usuários reais recém-marcados (não para si mesmo)
+    const prevUserIds = new Set(
+      (selectedMemory?.people ?? []).map((p) => p.user_id).filter(Boolean)
+    );
+    const newlyTagged = formData.people.filter(
+      (p) => p.user_id && p.user_id !== user.id && !prevUserIds.has(p.user_id)
+    );
+    if (newlyTagged.length > 0) {
+      const memTitle = formData.text.trim().slice(0, 60);
+      await supabase.from('notifications').insert(
+        newlyTagged.map((p) => ({
+          user_id: p.user_id!,
+          type: 'memory_tag',
+          memory_id: memoryId,
+          from_user_id: user.id,
+          meta: { memory_title: memTitle },
+        }))
+      );
+    }
 
     await supabase.from('memory_tags').delete().eq('memory_id', memoryId);
     if (formData.tags.length > 0)

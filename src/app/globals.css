@@ -812,6 +812,121 @@ p.page-subtitle {
 
 .dropdown-item:hover svg { color: #9B8FFF; }
 
+/* ── People dropdown (autocomplete com perfis reais) ─────────── */
+.people-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -34px;   /* cobre ícone (20px) + gap (14px) */
+  right: -24px;  /* alinha com a borda do sheet-fields */
+  background: #16161C;
+  border: 0.5px solid #252530;
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  padding: 4px;
+}
+
+.people-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+
+.people-dropdown-item:hover,
+.people-dropdown-item.active {
+  background: rgba(155, 143, 255, 0.1);
+}
+
+/* Avatar circular 32px */
+.people-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(155, 143, 255, 0.25);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.people-avatar--plus {
+  background: rgba(255, 255, 255, 0.06);
+  color: #6B6B7A;
+}
+
+.people-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.people-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.people-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #BCBCC8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.people-dropdown-item:hover .people-name,
+.people-dropdown-item.active .people-name {
+  color: #fff;
+}
+
+.people-email {
+  font-size: 11px;
+  color: #4A4A58;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Separador visual antes do item de texto livre */
+.people-dropdown-item--freetext {
+  border-top: 0.5px solid rgba(255, 255, 255, 0.05);
+  margin-top: 2px;
+}
+
+/* Chip vinculado (com user_id) */
+.chip-person--linked {
+  background: rgba(155, 143, 255, 0.2) !important;
+  border: 1px solid rgba(155, 143, 255, 0.35);
+}
+
+/* Mobile: dropdown ocupa largura total do sheet */
+@media (max-width: 768px) {
+  .people-dropdown {
+    left: -34px;
+    right: -24px;
+  }
+}
+
 /* Botão de deletar */
 .sheet-delete {
   display: block;
@@ -853,6 +968,214 @@ p.page-subtitle {
     margin: 12px auto 0;
     flex-shrink: 0;
   }
+}
+
+/* ── Notification Bell ───────────────────────── */
+
+/* Badge no ícone do sino */
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  background: var(--accent-purple);
+  color: #0D0D0F;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Dropdown container */
+@keyframes notif-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.notif-dropdown {
+  position: fixed;
+  width: 320px;
+  max-height: calc(380px + 52px); /* lista + header */
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: notif-in 0.15s ease-out;
+
+  /* Light mode */
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.dark .notif-dropdown {
+  background: #1E1E28;
+  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+}
+
+/* Header */
+.notif-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .notif-dropdown-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.notif-dropdown-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notif-mark-all {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.notif-mark-all:hover {
+  color: var(--accent-purple);
+}
+
+/* Lista com scroll */
+.notif-list {
+  overflow-y: auto;
+  max-height: 380px;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.dark .notif-list {
+  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+}
+
+/* Estado vazio */
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 8px;
+}
+
+.notif-empty-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Item de notificação */
+.notif-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px 10px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  background: transparent;
+  font-family: inherit;
+  transition: background 0.1s;
+  min-height: 44px;
+}
+
+.notif-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .notif-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notif-item--unread {
+  background: rgba(155, 143, 255, 0.08);
+}
+
+.dark .notif-item--unread {
+  background: rgba(155, 143, 255, 0.08);
+}
+
+.notif-item--unread:hover {
+  background: rgba(155, 143, 255, 0.13);
+}
+
+/* Bolinha de não lida */
+.notif-unread-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  flex-shrink: 0;
+}
+
+/* Avatar 36px */
+.notif-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(155, 143, 255, 0.22);
+  color: var(--accent-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.notif-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Conteúdo textual */
+.notif-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* ── Search empty suggestions ────────────────── */

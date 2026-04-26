@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
 import { Calendar, Star, Search, BarChart2, ChevronDown, Sun, Moon, LogOut } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 
 const TABS = [
   { href: '/', label: 'Calendário', Icon: Calendar },
@@ -111,6 +112,9 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Sino de notificações — abaixo de Estatísticas */}
+        <NotificationBell />
       </nav>
 
       {/* User profile */}

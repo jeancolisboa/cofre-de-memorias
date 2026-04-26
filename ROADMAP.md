@@ -1,13 +1,48 @@
 # Cofre de Memórias — Roadmap
 
 ## Status atual
-**Versão:** 0.3.0
-**Última atualização:** 2026-04-24
+**Versão:** 0.4.0
+**Última atualização:** 2026-04-26
 **Ambiente:** desenvolvimento local (`npm run dev`)
 
 ---
 
 ## Changelog
+
+### 2026-04-26 — v0.4.0 · Pessoas reais + notificações in-app
+
+**Migration 002 — Fase 3: compartilhamento, grupos e notificações**
+- `memory_members` — papel de cada usuário em uma memória (owner/contributor/viewer), com `invited_by` e `accepted_at` nullable (NULL = convite pendente), UNIQUE `(memory_id, user_id)`
+- `groups` — grupos com `name`, `emoji`, `created_by`, trigger `updated_at` automático
+- `group_members` — role admin/member por grupo, UNIQUE `(group_id, user_id)`
+- `group_memories` — vínculo memória ↔ grupo, UNIQUE `(group_id, memory_id)`
+- `notifications` — tipos: `memory_tag`, `group_invite`, `group_new_memory`, `on_this_day`; campos: `user_id`, `type`, `memory_id?`, `group_id?`, `from_user_id?`, `meta jsonb`, `read_at?`
+- RLS completo em todas as tabelas; policy `"Users can manage own memories"` substituída por 4 granulares
+- `create_group_with_admin(name, emoji)` — função helper atômica (`SECURITY DEFINER`)
+- Realtime habilitado na tabela `notifications`
+
+**Migration 003 — Perfis públicos + user_id em pessoas**
+- `profiles` — tabela pública com `display_name`, `avatar_url`, `email`; trigger `on_auth_user_created` popula automaticamente no signup; backfill de usuários existentes
+- `memory_people.user_id` — coluna nullable para vincular pessoa a usuário real
+
+**Campo de pessoas com autocomplete de usuários reais**
+- Busca em `profiles` com debounce 300ms ao digitar 2+ caracteres
+- Dropdown rico: avatar circular (foto ou inicial), nome, email
+- Opção "Adicionar como texto livre" sempre disponível no final do dropdown
+- Chip roxo com ícone de link para usuários vinculados; chip padrão para texto livre
+- Navegação por teclado (↑↓ Enter Tab Escape)
+- Histórico local (1 char) preservado como fallback
+
+**Notificações in-app**
+- Sino na sidebar com badge roxo (máx "9+") para não lidas
+- Dropdown 320px com lista das últimas 20 notificações
+- Textos por tipo: `memory_tag`, `group_invite`, `group_new_memory`, `on_this_day`
+- Item não lido: fundo roxo sutil + bolinha indicadora
+- "Marcar todas como lidas" no header do dropdown
+- Realtime via Supabase `postgres_changes` — badge e lista atualizam sem reload
+- Geração automática de `memory_tag` ao salvar memória com usuário marcado (apenas recém-adicionados, nunca para si mesmo)
+
+---
 
 ### 2026-04-24 — v0.3.0 · Sheet lateral, emoji-mart, dark mode polish
 
@@ -156,11 +191,21 @@
 - [ ] Notificação push: lembrete diário para registrar o dia
 - [ ] Ícones PWA personalizados (substituir placeholder)
 
+### Fase 3 — Compartilhamento e grupos
+- [x] Schema: `memory_members`, `groups`, `group_members`, `group_memories`, `notifications`
+- [x] RLS completo em todas as tabelas de compartilhamento
+- [x] Função `create_group_with_admin()`
+- [x] Tabela `profiles` com trigger de auto-populate
+- [x] Autocomplete de usuários reais no campo de pessoas
+- [x] Notificações in-app com realtime e badge
+- [x] Geração automática de `memory_tag`
+- [ ] Frontend: convidar usuário para memória (memory_members)
+- [ ] Frontend: criar e gerenciar grupos
+- [ ] Notificação "Neste dia X anos atrás" (on_this_day)
+
 ### Baixa prioridade / Futuro
 - [ ] Exportar memórias (PDF ou JSON)
 - [ ] Mapa com localização das memórias
-- [ ] "Neste dia X anos atrás" — memórias de datas passadas
-- [ ] Modo colaborativo: memórias compartilhadas com outra pessoa
 - [ ] Retrospectiva mensal automática
 
 ---
@@ -183,6 +228,7 @@
 
 | Data | O que foi feito |
 |---|---|
+| 2026-04-26 | v0.4.0 — autocomplete de usuários reais no campo pessoas, notificações in-app com realtime, migrations 002 e 003, profiles com trigger de signup |
 | 2026-04-24 | Sheet lateral, emoji-mart, autocomplete de músicas, calendar mood colors, login redesign, dark mode polish |
 | 2026-04-15 | Design system dark intimate, layout web responsivo, sidebar com menu de usuário, UX/UI ajustes |
 | 2026-04-14 | Setup completo, Supabase configurado, OAuth funcional, redesign visual, fix calendário |
