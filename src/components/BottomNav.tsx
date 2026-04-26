@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, Star, Search, BarChart2 } from 'lucide-react';
+import { Calendar, Star, Users, Search, BarChart2 } from 'lucide-react';
 
 const TABS = [
   { href: '/', label: 'Calendário', Icon: Calendar },
   { href: '/pinned', label: 'Fixadas', Icon: Star },
+  { href: '/groups', label: 'Grupos', Icon: Users },
   { href: '/search', label: 'Busca', Icon: Search },
   { href: '/stats', label: 'Stats', Icon: BarChart2 },
 ];
@@ -25,7 +26,9 @@ export default function BottomNav() {
     >
       <div className="flex items-stretch h-full pb-safe">
         {TABS.map((tab) => {
-          const isActive = pathname === tab.href;
+          const isActive = tab.href === '/groups'
+            ? (pathname === '/groups' || pathname.startsWith('/groups/'))
+            : pathname === tab.href;
           return (
             <Link
               key={tab.href}

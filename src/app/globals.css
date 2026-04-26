@@ -1440,3 +1440,68 @@ p.page-subtitle {
   .login-form-panel { width: 100%; border-left: none; border-top: 0.5px solid #1C1C22; flex: 1; }
   .fc-2 { display: none; }
 }
+
+/* ── Groups ───────────────────────────────────── */
+
+/* Card na lista de grupos */
+.group-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.group-card:hover {
+  box-shadow: 0 4px 20px rgba(155, 143, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.group-card:active {
+  transform: scale(0.98);
+}
+
+/* Label de campo nos sheets de grupo */
+.group-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+/* FAB de adicionar memória (mobile) */
+.group-fab {
+  position: fixed;
+  bottom: 76px;
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  color: #0D0D0F;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(155, 143, 255, 0.4);
+  z-index: 30;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.group-fab:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 22px rgba(155, 143, 255, 0.5);
+}
+
+.group-fab:active {
+  transform: scale(0.94);
+}

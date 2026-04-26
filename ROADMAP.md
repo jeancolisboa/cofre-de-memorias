@@ -228,7 +228,7 @@
 
 | Data | O que foi feito |
 |---|---|
-| 2026-04-26 | v0.4.0 — autocomplete de usuários reais no campo pessoas, notificações in-app com realtime, migrations 002 e 003, profiles com trigger de signup |
+| 2026-04-26 | v0.4.0 — autocomplete de usuários reais, notificações in-app com realtime, migrations 002/003; fix recursão infinita em memory_members_select |
 | 2026-04-24 | Sheet lateral, emoji-mart, autocomplete de músicas, calendar mood colors, login redesign, dark mode polish |
 | 2026-04-15 | Design system dark intimate, layout web responsivo, sidebar com menu de usuário, UX/UI ajustes |
 | 2026-04-14 | Setup completo, Supabase configurado, OAuth funcional, redesign visual, fix calendário |

@@ -209,26 +209,41 @@ export default function NotificationBell() {
 
   const handleAccept = useCallback(async (notif: NotifItem) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !notif.memory_id) return;
-    await supabase.from('memory_members').upsert({
-      memory_id: notif.memory_id,
-      user_id: user.id,
-      role: 'viewer',
-      invited_by: notif.from_user_id,
-      accepted_at: new Date().toISOString(),
-    }, { onConflict: 'memory_id,user_id' });
+    if (!user) return;
+
+    if (notif.type === 'memory_tag' && notif.memory_id) {
+      await supabase.from('memory_members').upsert({
+        memory_id: notif.memory_id,
+        user_id: user.id,
+        role: 'viewer',
+        invited_by: notif.from_user_id,
+        accepted_at: new Date().toISOString(),
+      }, { onConflict: 'memory_id,user_id' });
+    } else if (notif.type === 'group_invite' && notif.group_id) {
+      await supabase.from('group_members').upsert({
+        group_id: notif.group_id,
+        user_id: user.id,
+        role: 'member',
+      }, { onConflict: 'group_id,user_id' });
+    }
+
     await markRead(notif.id);
   }, [supabase, markRead]);
 
   const handleReject = useCallback(async (notif: NotifItem) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !notif.memory_id) return;
-    await Promise.all([
-      supabase.from('memory_people').delete()
-        .eq('memory_id', notif.memory_id).eq('user_id', user.id),
-      supabase.from('memory_members').delete()
-        .eq('memory_id', notif.memory_id).eq('user_id', user.id),
-    ]);
+    if (!user) return;
+
+    if (notif.type === 'memory_tag' && notif.memory_id) {
+      await Promise.all([
+        supabase.from('memory_people').delete()
+          .eq('memory_id', notif.memory_id).eq('user_id', user.id),
+        supabase.from('memory_members').delete()
+          .eq('memory_id', notif.memory_id).eq('user_id', user.id),
+      ]);
+    }
+    // group_invite: apenas descarta a notificação
+
     await markRead(notif.id);
     setNotifs((prev) => prev.filter((n) => n.id !== notif.id));
   }, [supabase, markRead]);
@@ -295,8 +310,8 @@ export default function NotificationBell() {
             )}
 
             {!loading && notifs.map((notif) => {
-              const isPendingTag = !notif.read_at && notif.type === 'memory_tag';
-              return isPendingTag ? (
+              const isPendingAction = !notif.read_at && (notif.type === 'memory_tag' || notif.type === 'group_invite');
+              return isPendingAction ? (
                 <div
                   key={notif.id}
                   className="notif-item notif-item--unread"
@@ -322,7 +337,7 @@ export default function NotificationBell() {
                       className="notif-action-btn notif-action-btn--accept"
                       onClick={() => handleAccept(notif)}
                     >
-                      ✓ Aceitar
+                      {notif.type === 'group_invite' ? '✓ Entrar' : '✓ Aceitar'}
                     </button>
                     <button
                       className="notif-action-btn notif-action-btn--reject"

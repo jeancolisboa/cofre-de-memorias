@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@/components/ThemeProvider';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Star, Search, BarChart2, ChevronDown, Sun, Moon, LogOut } from 'lucide-react';
+import { Calendar, Star, Users, Search, BarChart2, ChevronDown, Sun, Moon, LogOut } from 'lucide-react';
 
 const TABS = [
   { href: '/', label: 'Calendário', Icon: Calendar },
   { href: '/pinned', label: 'Fixadas', Icon: Star },
+  { href: '/groups', label: 'Grupos', Icon: Users },
   { href: '/search', label: 'Busca', Icon: Search },
   { href: '/stats', label: 'Estatísticas', Icon: BarChart2 },
 ];
@@ -76,7 +77,9 @@ export default function Sidebar() {
       {/* Nav items */}
       <nav className="flex-1 px-3 space-y-0.5">
         {TABS.map((tab) => {
-          const isActive = pathname === tab.href;
+          const isActive = tab.href === '/groups'
+            ? (pathname === '/groups' || pathname.startsWith('/groups/'))
+            : pathname === tab.href;
           return (
             <Link
               key={tab.href}

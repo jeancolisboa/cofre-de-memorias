@@ -70,6 +70,37 @@ export interface CollectionMemory {
   added_at: string;
 }
 
+export interface Group {
+  id: string;
+  name: string;
+  emoji: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  my_role?: 'admin' | 'member';
+  member_count?: number;
+  memory_count?: number;
+}
+
+export interface GroupMember {
+  user_id: string;
+  role: 'admin' | 'member';
+  joined_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  email: string | null;
+}
+
+export interface GroupMemoryItem {
+  id: string;
+  memory_id: string;
+  posted_by: string;
+  posted_at: string;
+  memory: Memory;
+  poster_name: string | null;
+  poster_avatar: string | null;
+}
+
 export interface MemoryFormData {
   text: string;
   mood: Mood | null;
