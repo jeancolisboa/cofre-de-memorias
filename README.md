@@ -76,14 +76,14 @@ src/
 
 ## Versão atual
 
-**v0.4.0** — Social e Compartilhamento (grupos, notificações, marcação de pessoas)
+**v0.7.0** — Fixes de layout desktop + lixeira com soft delete
 
 ## Roadmap
 
 | Fase | Status | Descrição |
 |---|---|---|
 | Fase 1 — Base sólida | ✅ Concluída | Auth Google, CRUD de memórias, calendário, busca, fixadas, stats, dark mode |
-| Fase 2 — Social e Compartilhamento | ✅ Concluída | Marcar pessoas, notificações Realtime, grupos, aceite/recusa, co-autoria |
+| Fase 2 — Social e Compartilhamento | ✅ Concluída | Marcar pessoas, notificações Realtime, grupos, aceite/recusa, co-autoria, lixeira |
 | Fase 3 — Enriquecimento e Inteligência | 🔲 Planejada | Fotos, Spotify, Google Maps, On This Day, resumo mensal/anual, exportação |
 | Fase 4 — Produção e Mobile | 🔲 Planejada | Deploy, CI/CD, React Native + Expo, push notifications, PWA offline |
 | Fase 5 — Monetização | 🔲 Planejada | Plano gratuito/premium, gift de premium para amigos |

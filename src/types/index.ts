@@ -25,10 +25,13 @@ export interface Memory {
   is_pinned: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   // Relations (optional, from joins)
   people?: MemoryPerson[];
   tags?: MemoryTag[];
   music_data?: MemoryMusic;
+  photos?: MemoryPhoto[];
+  photo_url?: string | null; // signed URL for first photo
 }
 
 export interface MemoryMusic {
@@ -99,6 +102,13 @@ export interface GroupMemoryItem {
   memory: Memory;
   poster_name: string | null;
   poster_avatar: string | null;
+}
+
+export interface MemoryPhoto {
+  id: string;
+  memory_id: string;
+  storage_path: string;
+  created_at: string;
 }
 
 export interface MemoryFormData {

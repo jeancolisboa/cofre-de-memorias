@@ -309,7 +309,7 @@ export default function NotificationBell() {
               </div>
             )}
 
-            {!loading && notifs.map((notif) => {
+            {!loading && notifs.slice(0, 5).map((notif) => {
               const isPendingAction = !notif.read_at && (notif.type === 'memory_tag' || notif.type === 'group_invite');
               return isPendingAction ? (
                 <div
@@ -369,6 +369,21 @@ export default function NotificationBell() {
                 </button>
               );
             })}
+
+            {/* Ver todas */}
+            {!loading && notifs.length > 5 && (
+              <button
+                onClick={() => setOpen(false)}
+                style={{
+                  width: '100%', padding: '10px', fontSize: '12px', fontWeight: 500,
+                  color: 'var(--accent-purple)', background: 'none', border: 'none',
+                  borderTop: '0.5px solid var(--border)', cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Ver todas ({notifs.length})
+              </button>
+            )}
           </div>
         </div>
       )}

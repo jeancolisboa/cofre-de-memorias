@@ -1,19 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Calendar, Star, Users, Search, BarChart2 } from 'lucide-react';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { Calendar, BookOpen, Star, UserCircle2, Plus } from 'lucide-react';
 
 const TABS = [
-  { href: '/', label: 'Calendário', Icon: Calendar },
-  { href: '/pinned', label: 'Fixadas', Icon: Star },
-  { href: '/groups', label: 'Grupos', Icon: Users },
-  { href: '/search', label: 'Busca', Icon: Search },
-  { href: '/stats', label: 'Stats', Icon: BarChart2 },
+  { label: 'Calendário', Icon: Calendar,    href: '/',              view: null    },
+  { label: 'Memórias',   Icon: BookOpen,    href: '/?view=memories', view: 'memories' },
+  { label: 'Fixadas',    Icon: Star,        href: '/?view=pinned',  view: 'pinned' },
+  { label: 'Perfil',     Icon: UserCircle2, href: '/?view=settings', view: 'settings' },
 ];
 
 export default function BottomNav() {
-  const pathname = usePathname();
+  const pathname     = usePathname();
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+  const currentView  = searchParams.get('view');
+
+  function isActive(tab: typeof TABS[number]) {
+    if (tab.view) return pathname === '/' && currentView === tab.view;
+    return pathname === '/' && !currentView;
+  }
 
   return (
     <nav
@@ -21,35 +28,71 @@ export default function BottomNav() {
       style={{
         background: 'var(--bg-card)',
         borderTop: '1px solid var(--border)',
-        height: '56px',
+        height: '60px',
       }}
     >
-      <div className="flex items-stretch h-full pb-safe">
-        {TABS.map((tab) => {
-          const isActive = tab.href === '/groups'
-            ? (pathname === '/groups' || pathname.startsWith('/groups/'))
-            : pathname === tab.href;
+      <div style={{ display: 'flex', alignItems: 'stretch', height: '100%', position: 'relative' }}>
+
+        {/* Tabs esquerda */}
+        {TABS.slice(0, 2).map((tab) => {
+          const active = isActive(tab);
           return (
             <Link
-              key={tab.href}
+              key={tab.label}
               href={tab.href}
-              className="flex flex-col items-center justify-center flex-1 gap-1"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
             >
               <tab.Icon
                 size={20}
-                strokeWidth={isActive ? 2 : 1.5}
-                fill={isActive && tab.href === '/pinned' ? 'currentColor' : 'none'}
-                style={{ color: isActive ? 'var(--accent-purple)' : 'var(--text-muted)' }}
+                strokeWidth={active ? 2 : 1.5}
+                style={{ color: active ? 'var(--accent-purple)' : 'var(--text-muted)' }}
               />
-              {isActive && (
-                <span
-                  className="w-1 h-1 rounded-full"
-                  style={{ background: 'var(--accent-purple)' }}
-                />
-              )}
+              <span style={{ fontSize: '9px', color: active ? 'var(--accent-purple)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+                {tab.label}
+              </span>
             </Link>
           );
         })}
+
+        {/* Botão + central */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            onClick={() => router.push('/?new=1')}
+            style={{
+              width: '48px', height: '48px', borderRadius: '50%',
+              background: 'var(--accent-purple)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(155,143,255,0.45)',
+              marginBottom: '4px',
+            }}
+          >
+            <Plus size={22} strokeWidth={2.5} style={{ color: '#fff' }} />
+          </button>
+        </div>
+
+        {/* Tabs direita */}
+        {TABS.slice(2).map((tab) => {
+          const active = isActive(tab);
+          return (
+            <Link
+              key={tab.label}
+              href={tab.href}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+            >
+              <tab.Icon
+                size={20}
+                strokeWidth={active ? 2 : 1.5}
+                fill={active && tab.label === 'Fixadas' ? 'currentColor' : 'none'}
+                style={{ color: active ? 'var(--accent-purple)' : 'var(--text-muted)' }}
+              />
+              <span style={{ fontSize: '9px', color: active ? 'var(--accent-purple)' : 'var(--text-muted)', fontWeight: active ? 600 : 400 }}>
+                {tab.label}
+              </span>
+            </Link>
+          );
+        })}
+
       </div>
     </nav>
   );

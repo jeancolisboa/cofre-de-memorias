@@ -9,12 +9,13 @@ import NotificationBell from '@/components/NotificationBell';
 import GroupCreateSheet from '@/components/GroupCreateSheet';
 import { createClient } from '@/lib/supabase/client';
 import type { Group } from '@/types';
-import { Plus, ChevronRight, Users } from 'lucide-react';
+import { Plus, ChevronRight, Users, Menu } from 'lucide-react';
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -59,51 +60,62 @@ export default function GroupsPage() {
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
   return (
-    <div className="flex" style={{ background: 'var(--bg-base)' }}>
-      <Sidebar />
+    <div style={{ background: 'var(--bg-base)', minHeight: '100vh' }}>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className="flex-1 lg:ml-[220px]">
+      <div className="lg:ml-[200px]">
         {/* Header */}
         <header
-          className="px-4 lg:px-8 pt-14 lg:pt-8 pb-3 flex items-center justify-between sticky top-0 z-30"
-          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
+          className="px-4 lg:px-8"
+          style={{
+            height: '60px', display: 'flex', alignItems: 'center', gap: '12px',
+            background: 'var(--bg-base)', borderBottom: '0.5px solid var(--border)',
+            position: 'sticky', top: 0, zIndex: 30,
+          }}
         >
-          <div className="lg:hidden">
+          {/* Hamburger mobile */}
+          <button
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              width: '32px', height: '32px', borderRadius: '8px',
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'var(--text-secondary)', flexShrink: 0,
+            }}
+          >
+            <Menu size={16} />
+          </button>
+
+          {/* Título mobile */}
+          <span className="lg:hidden" style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', flex: 1 }}>
+            Meus Grupos
+          </span>
+
+          {/* Título desktop */}
+          <span className="hidden lg:block" style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)', flex: 1 }}>
+            Meus Grupos
+          </span>
+
+          {/* Ações */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <NotificationBell />
-          </div>
-          <div className="hidden lg:block">
-            <h1 className="page-title">Meus Grupos</h1>
-            <p className="page-subtitle">
-              {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden lg:flex items-center gap-2">
-              <NotificationBell />
-              <button className="new-memory-btn" onClick={() => setShowCreate(true)}>
-                <Plus size={14} />
-                Novo grupo
-              </button>
-            </div>
             <button
-              className="lg:hidden w-11 h-11 flex items-center justify-center rounded-full"
-              style={{ background: 'var(--accent-purple)', color: '#0D0D0F' }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                height: '34px', padding: '0 14px',
+                background: 'var(--accent-purple)', border: 'none', borderRadius: '17px',
+                color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              }}
               onClick={() => setShowCreate(true)}
-              title="Novo grupo"
             >
-              <Plus size={22} strokeWidth={2.5} />
+              <Plus size={14} strokeWidth={2.5} />
+              <span className="hidden sm:inline">Novo grupo</span>
             </button>
           </div>
         </header>
 
-        <div className="px-4 lg:px-8 py-5 pb-28 lg:pb-10" style={{ maxWidth: '720px' }}>
-          {/* Título mobile */}
-          <div className="lg:hidden mb-5">
-            <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)' }}>Meus Grupos</h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'}
-            </p>
-          </div>
+        <div className="px-4 lg:px-8 py-5 pb-24 lg:pb-10" style={{ maxWidth: '720px' }}>
 
           {loading && (
             <div className="flex justify-center pt-10">
@@ -154,7 +166,7 @@ export default function GroupsPage() {
         </div>
 
         <BottomNav />
-      </main>
+      </div>
 
       {showCreate && (
         <GroupCreateSheet

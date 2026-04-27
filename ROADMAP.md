@@ -1,7 +1,7 @@
 # Cofre de Memórias — Roadmap
 
 ## Status atual
-**Versão:** 0.4.0
+**Versão:** 0.7.0
 **Última atualização:** 2026-04-26
 **Ambiente:** desenvolvimento local (`npm run dev`)
 
@@ -34,7 +34,7 @@
 
 **Objetivo:** memórias compartilhadas entre pessoas reais.
 
-**Schema (migration 002 + 003):**
+**Schema (migrations 002 + 003):**
 - [x] `profiles` — tabela pública com `display_name`, `avatar_url`, `email`; trigger `on_auth_user_created` para auto-populate; backfill de usuários existentes
 - [x] `memory_people.user_id` — coluna nullable para vincular pessoa a usuário real
 - [x] `memory_members` — papel de cada usuário em uma memória (owner/contributor/viewer), com `invited_by` e `accepted_at` nullable (NULL = pendente)
@@ -80,13 +80,23 @@
 - [x] Ponto roxo (5px) no canto do dia no calendário quando há memória em grupo
 - [x] Seção "Grupos" somente-leitura no sheet de edição da memória
 
+**Schema (migrations 004 + 005):**
+- [x] `memory_photos` — tabela de fotos por memória (`storage_path`, `created_at`), RLS por owner
+- [x] `memories.deleted_at` — soft delete com lixeira de 30 dias
+
+**Lixeira:**
+- [x] Soft delete: `deleted_at` preenchido ao excluir, memória some do calendário
+- [x] Lixeira (sidebar) — lista memórias excluídas nos últimos 30 dias
+- [x] Ações: "Reviver" (restaura) e exclusão permanente
+- [x] Exibição de dias restantes antes da remoção automática
+
 ---
 
 ### 🔲 FASE 3 — Enriquecimento e Inteligência
 
 **Objetivo:** memórias mais ricas com mídia, contexto e inteligência temporal.
 
-- [ ] **Upload de fotos** — estilo Polaroid, armazenamento no Supabase Storage, máx. 5 por memória
+- [ ] **Upload de fotos** — armazenamento no Supabase Storage (`memory-photos`), máx. 5 por memória, signed URLs com TTL
 - [ ] **Integração Spotify API** — busca de faixas com preview de 30s, salva `spotify_track_id`
 - [ ] **Integração Google Maps API** — autocomplete de localização com coordenadas reais
 - [ ] **"On This Day" / Replay do Dia** — notificação diária `on_this_day` para memórias de anos anteriores naquela data
@@ -121,6 +131,25 @@
 ---
 
 ## Changelog
+
+### 2026-04-26 — v0.7.0 · Fixes de layout desktop + TypeScript
+
+**Fixadas no desktop**
+- Grid de cards agora usa `.grid-cards` (responsive grid) em vez de `flex-wrap` — corrige cards esticados a 100% de largura
+
+**Estatísticas no desktop/mobile**
+- KPIs: 2 colunas no mobile, 4 no desktop (antes travado em 4 sem responsividade)
+- Seção Pessoas/Tags: empilhada no mobile, lado a lado a partir de `sm:`
+
+**Grupo detalhe (`/groups/[id]`)**
+- `position: 'relative'` no style do header sobrescrevia o `sticky` do className — removido
+- `pt-14` (56px) inflava o header no mobile — corrigido para `pt-4 lg:pt-0` com `lg:h-[60px]`
+- `lg:ml-[220px]` corrigido para `lg:ml-[200px]` (coincidir com a largura real da sidebar)
+
+**Fix TypeScript / 404 em `/groups`**
+- `MemoryModal.tsx`: cast inválido `r.groups as { name; emoji }` → `as unknown as { name; emoji }` (Supabase inferia array, TypeScript rejeitava, causava falha de compilação e 404)
+
+---
 
 ### 2026-04-26 — v0.4.0 · Social e Compartilhamento
 
@@ -212,9 +241,9 @@
 - Scrollbar customizada, transições suaves, foco acessível com `--accent-purple`
 
 **Layout responsivo web-first**
-- Sidebar fixa (220px) visível em `lg:`, bottom nav só no mobile
+- Sidebar fixa (200px) visível em `lg:`, bottom nav só no mobile
 - Header sticky com fundo `--bg-base` em todas as telas
-- Duas colunas na home: calendário (max 560px) + memórias recentes (320px, sticky)
+- Duas colunas na home: calendário + memórias recentes
 
 **Sidebar — menu de usuário**
 - Avatar com iniciais, nome formatado, chevron
@@ -231,7 +260,6 @@
 - Calendário mensal navegável com destaque nos dias com memórias
 - Modal de memória com: texto, mood, música, local, @pessoas, #tags, fixar
 - Bottom navigation: Calendário, Fixadas, Busca, Stats
-- Páginas: Fixadas, Busca, Stats
 
 ---
 
@@ -241,6 +269,7 @@
 |---|---|
 | Login com Google OAuth | ✅ |
 | CRUD de memórias | ✅ |
+| Lixeira com soft delete (30 dias) | ✅ |
 | Calendário mensal com drag para ranges | ✅ |
 | Diferenciação visual por mood no calendário | ✅ |
 | Sheet lateral de edição | ✅ |
@@ -280,6 +309,7 @@
 
 | Data | O que foi feito |
 |---|---|
+| 2026-04-26 | v0.7.0 — Fixes de layout desktop (fixadas, stats, grupos header), TypeScript/404 em /groups |
 | 2026-04-26 | v0.4.0 — Fase 2 completa: grupos, notificações, aceite/recusa, indicadores visuais, fixes de header e navegação |
 | 2026-04-24 | Sheet lateral, emoji-mart, autocomplete de músicas, calendar mood colors, login redesign, dark mode polish |
 | 2026-04-15 | Design system dark intimate, layout web responsivo, sidebar com menu de usuário |

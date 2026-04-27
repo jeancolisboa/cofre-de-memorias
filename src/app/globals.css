@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ── Google Fonts ────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Dancing+Script:wght@500&display=swap');
 
 /* ── CSS Variables ───────────────────────────── */
 :root {
@@ -52,6 +52,12 @@
   --mood-tranquilo: #4ECDC4;
   --mood-saudade: #FFD93D;
   --mood-cansado: #6BCB77;
+}
+
+/* ── Animations ─────────────────────────────── */
+@keyframes heroFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ── Base reset ─────────────────────────────── */
@@ -1000,8 +1006,8 @@ p.page-subtitle {
 
 .notif-dropdown {
   position: fixed;
-  width: 320px;
-  max-height: calc(380px + 52px); /* lista + header */
+  width: 300px;
+  max-height: calc(320px + 44px); /* lista + header */
   border-radius: 14px;
   overflow: hidden;
   z-index: 50;
@@ -1212,18 +1218,15 @@ p.page-subtitle {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-/* Mobile: dropdown ocupa toda a largura */
+/* Mobile: dropdown compacto alinhado à direita */
 @media (max-width: 1023px) {
   .notif-dropdown {
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    border-radius: 0 0 16px 16px;
-    max-height: 60vh;
+    width: 288px;
+    max-height: 320px;
   }
 
   .notif-list {
-    max-height: calc(60vh - 52px);
+    max-height: calc(320px - 44px);
   }
 
   .notif-action-btn {
@@ -1506,4 +1509,21 @@ p.page-subtitle {
 
 .group-fab:active {
   transform: scale(0.94);
+}
+
+/* ── Grid de cards responsivo ─────────────────── */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.grid-card-item {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .grid-cards {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
 }

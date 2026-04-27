@@ -217,16 +217,16 @@ export default function GroupDetailPage() {
   const isAdmin = myRole === 'admin';
 
   return (
-    <div className="flex" style={{ background: 'var(--bg-base)' }}>
+    <div style={{ background: 'var(--bg-base)', minHeight: '100vh' }}>
       <Sidebar />
 
-      <main className="flex-1 lg:ml-[220px]">
+      <main className="lg:ml-[200px]">
         {/* Header — padrão global */}
         <header
           className="sticky top-0 z-30"
-          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)', position: 'relative' }}
+          style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border)' }}
         >
-          <div className="px-4 lg:px-8 pt-14 lg:pt-8 pb-3 flex items-center justify-between">
+          <div className="px-4 lg:px-8 pt-4 lg:pt-0 pb-3 lg:pb-0 lg:h-[60px] flex items-center justify-between">
 
             {/* ── ESQUERDA ── */}
             <div className="flex items-center gap-2">
