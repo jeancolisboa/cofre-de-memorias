@@ -175,17 +175,18 @@ export default function HomePage() {
     for (const m of [...direct, ...range]) { if (!seen.has(m.id)) { seen.add(m.id); all.push(m); } }
     if (all.length === 0) { setSelectedDate(date); setSelectedMemory(null); }
     else if (all.length === 1) { setSelectedDate(new Date(all[0].date + 'T12:00:00')); setSelectedMemory(all[0]); }
-    else { setSelectedDate(date); setPendingDayMemories(all); }
+    else { setSelectedDate(date); setSelectedMemory(undefined); setPendingDayMemories(all); }
   }, [memoriesMap]);
 
   const handleSave = useCallback(async (formData: MemoryFormData) => {
     if (!selectedDate) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const dateKey = format(selectedDate, 'yyyy-MM-dd');
+    const dateKey = formData.date ?? format(selectedDate, 'yyyy-MM-dd');
     let memoryId: string;
     if (selectedMemory) {
       const { error } = await supabase.from('memories').update({
+        title: formData.title,
         text: formData.text, mood: formData.mood, music: formData.music || null,
         location: formData.location || null, is_pinned: formData.is_pinned,
         end_date: formData.end_date || null, updated_at: new Date().toISOString(),
@@ -194,7 +195,9 @@ export default function HomePage() {
       memoryId = selectedMemory.id;
     } else {
       const { data, error } = await supabase.from('memories').insert({
-        user_id: user.id, date: dateKey, text: formData.text, mood: formData.mood,
+        user_id: user.id, date: dateKey,
+        title: formData.title,
+        text: formData.text, mood: formData.mood,
         music: formData.music || null, location: formData.location || null,
         is_pinned: formData.is_pinned, end_date: formData.end_date || null,
       }).select().single();
@@ -215,7 +218,7 @@ export default function HomePage() {
       if (newTagged.length > 0)
         await supabase.from('notifications').insert(newTagged.map((p) => ({
           user_id: p.user_id!, type: 'memory_tag', memory_id: memoryId, from_user_id: user.id,
-          meta: { memory_title: formData.text.trim().slice(0, 60) },
+          meta: { memory_title: (formData.title || formData.text).trim().slice(0, 60) },
         })));
     } catch (e) { console.warn('Notificação não enviada:', e); }
     await supabase.from('memory_tags').delete().eq('memory_id', memoryId);
@@ -261,25 +264,38 @@ export default function HomePage() {
     return s;
   }, [memoriesMap, groupMemoryIds]);
 
-  const highlights = useMemo(() =>
-    [...sortedMemories].sort(([, a], [, b]) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)).slice(0, 10),
-    [sortedMemories]);
+  const highlights = useMemo(() => {
+    const pinned = sortedMemories.filter(([, m]) => m.is_pinned);
+    const recent = sortedMemories.slice(0, 2);
+    const combined = [...pinned, ...recent].filter((item, idx, arr) => 
+      arr.findIndex(([d, m]) => m.id === item[1].id) === idx
+    );
+    return combined;
+  }, [sortedMemories]);
+
+  const recentMemories = useMemo(() => {
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const cutoff = format(twoDaysAgo, 'yyyy-MM-dd');
+    return sortedMemories.filter(([dk]) => dk >= cutoff);
+  }, [sortedMemories]);
 
   const filteredGrid = useMemo(() => {
     let list = sortedMemories;
     if (activeFilter === 'fixadas') list = list.filter(([, m]) => m.is_pinned);
-    if (activeFilter === 'recentes') list = list.slice(0, 20);
+    if (activeFilter === 'recentes') list = recentMemories;
     if (activeFilter === 'com_fotos') list = list.filter(([, m]) => m.photo_url);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(([, m]) =>
+        m.title.toLowerCase().includes(q) ||
         m.text.toLowerCase().includes(q) ||
         (m.location ?? '').toLowerCase().includes(q) ||
         (m.tags ?? []).some((t) => t.tag.toLowerCase().includes(q))
       );
     }
     return list;
-  }, [sortedMemories, activeFilter, searchQuery]);
+  }, [sortedMemories, activeFilter, searchQuery, recentMemories]);
 
   // People derived from memories
   const peopleFreq = useMemo(() => {
@@ -348,7 +364,7 @@ export default function HomePage() {
         </div>
 
         {/* Mobile: hamburger + nome */}
-        <div className="lg:hidden" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="lg:hidden flex items-center gap-[10px]">
           <button
             onClick={() => setSidebarOpen(true)}
             style={{
@@ -436,11 +452,11 @@ export default function HomePage() {
                 {/* Calendário + Memórias recentes lado a lado (desktop) / empilhados (mobile) */}
                 <div className="flex flex-col lg:flex-row" style={{ gap: '16px', alignItems: 'stretch' }}>
                   {/* Calendário */}
-                  <div style={{ flex: '1 1 50%', minWidth: 0 }}>
+                  <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <div style={{
                       background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.12)',
                       borderRadius: '16px', padding: '16px',
-                      boxShadow: '0 1px 8px rgba(0,0,0,0.15)', height: '100%',
+                      boxShadow: '0 1px 8px rgba(0,0,0,0.15)', flex: 1,
                     }}>
                       <Calendar
                         currentMonth={currentMonth}
@@ -458,21 +474,22 @@ export default function HomePage() {
                   </div>
 
                   {/* Memórias recentes */}
-                  <div style={{ flex: '1 1 50%', minWidth: 0, minHeight: '200px' }}>
+                  <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <div style={{
                       background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.12)',
                       borderRadius: '16px', padding: '16px',
-                      boxShadow: '0 1px 8px rgba(0,0,0,0.15)', height: '100%',
+                      boxShadow: '0 1px 8px rgba(0,0,0,0.15)',
                       display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                      flex: 1, minHeight: '340px',
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexShrink: 0 }}>
                         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Memórias recentes</span>
                         <button onClick={() => setActiveView('memories')} style={{ background: 'none', border: 'none', color: 'var(--accent-purple)', fontSize: '11px', cursor: 'pointer' }}>Ver todas →</button>
                       </div>
-                      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {loading && <LoadingSpinner />}
                         {!loading && totalMemories === 0 && <EmptyState icon="📭" text="Nenhuma memória este mês." />}
-                        {sortedMemories.slice(0, 12).map(([dk, m]) => (
+                        {sortedMemories.slice(0, 5).map(([dk, m]) => (
                           <RecentRow key={m.id} dateKey={dk} memory={m} inGroup={groupMemoryIds.has(m.id)} onClick={() => openMemory(m)} />
                         ))}
                       </div>
@@ -496,7 +513,7 @@ export default function HomePage() {
                 {sortedMemories.length > 0 && (
                   <section style={{ marginTop: '28px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <SectionHeader title="Todas as memórias" count={filteredGrid.length} noMargin />
+                      <SectionHeader title="Outras memórias" count={filteredGrid.length} noMargin />
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {(['todas', 'fixadas', 'recentes', 'com_fotos'] as const).map((f) => (
                           <FilterPill
@@ -670,7 +687,7 @@ export default function HomePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '22px', flexShrink: 0 }}>{m.mood ?? '📝'}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.text}</p>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title || m.text}</p>
                       <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {m.end_date
                           ? `${format(new Date(m.date + 'T12:00:00'), "d MMM", { locale: ptBR })} → ${format(new Date(m.end_date + 'T12:00:00'), "d MMM", { locale: ptBR })}`
@@ -692,6 +709,7 @@ export default function HomePage() {
 
       {selectedDate && selectedMemory !== undefined && (
         <MemoryModal
+          key={selectedMemory?.id ?? 'new'}
           date={selectedDate}
           memory={selectedMemory}
           initialEndDate={dragInitialEndDate}
@@ -781,7 +799,7 @@ function RecentRow({ dateKey, memory, onClick, inGroup }: { dateKey: string; mem
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: '12px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {memory.text}
+          {memory.title || memory.text}
         </div>
         <div style={{ fontSize: '11px', color: '#9ba0b3', marginTop: '2px' }}>
           {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
@@ -815,7 +833,7 @@ function MemoryListRow({ dateKey, memory, onClick, inGroup }: { dateKey: string;
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {memory.text}
+          {memory.title || memory.text}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px', fontSize: '11px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
           <Clock size={9} />
@@ -850,7 +868,7 @@ function HighlightCard({ dateKey, memory, onClick }: { dateKey: string; memory: 
       </div>
       {memory.mood && <div style={{ position: 'absolute', top: '7px', right: '9px', fontSize: '18px', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }}>{memory.mood}</div>}
       <div style={{ position: 'absolute', bottom: '9px', left: '9px', right: '9px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memory.text}</div>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memory.title || memory.text}</div>
         {memory.location && (
           <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
             <MapPin size={8} />{memory.location}
@@ -880,7 +898,7 @@ function GridCard({ dateKey, memory, onClick }: { dateKey: string; memory: Memor
           {format(new Date(dateKey + 'T12:00:00'), "d MMM", { locale: ptBR })}
         </div>
         <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
-          {memory.text}
+          {memory.title || memory.text}
         </div>
       </div>
     </button>
@@ -909,7 +927,7 @@ function TrashRow({ memory, onRestore, onDelete }: { memory: Memory; onRestore: 
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {memory.text}
+          {memory.title || memory.text}
         </div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
           {format(new Date(memory.date + 'T12:00:00'), "d 'de' MMM yyyy", { locale: ptBR })}

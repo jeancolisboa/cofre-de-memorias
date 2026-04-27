@@ -18,6 +18,7 @@ export interface Memory {
   user_id: string;
   date: string; // ISO date string YYYY-MM-DD
   end_date: string | null; // ISO date string YYYY-MM-DD, null = single day
+  title: string;
   text: string;
   mood: Mood | null;
   music: string | null;
@@ -112,6 +113,7 @@ export interface MemoryPhoto {
 }
 
 export interface MemoryFormData {
+  title: string;
   text: string;
   mood: Mood | null;
   music: string;
@@ -120,4 +122,5 @@ export interface MemoryFormData {
   tags: string[];
   is_pinned: boolean;
   end_date: string | null; // YYYY-MM-DD, null = single day
+  date?: string; // YYYY-MM-DD, override selectedDate when set (used by mobile date picker)
 }

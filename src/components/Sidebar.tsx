@@ -105,12 +105,11 @@ export default function Sidebar({ activeView, onViewChange, isOpen = false, onCl
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden"
+            className="lg:hidden flex items-center justify-center flex-shrink-0"
             style={{
               width: '28px', height: '28px', borderRadius: '8px',
               background: 'rgba(255,255,255,0.06)', border: 'none',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0,
+              cursor: 'pointer', color: 'var(--text-muted)',
             }}
           >
             <X size={15} />

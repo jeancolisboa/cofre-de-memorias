@@ -92,7 +92,7 @@ export default function StatsPage() {
           position: 'sticky', top: 0, zIndex: 30,
         }} className="lg:px-8">
           {/* Mobile: hamburger + nome */}
-          <div className="lg:hidden" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="lg:hidden flex items-center gap-[10px]">
             <button
               onClick={() => setSidebarOpen(true)}
               style={{
@@ -129,19 +129,21 @@ export default function StatsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
               {/* KPIs — linha compacta */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
                 {[
-                  { label: 'Total',    value: stats.total,        sub: 'memórias',    color: 'var(--accent-purple)' },
-                  { label: 'Mês',      value: stats.thisMonth,    sub: 'este mês',    color: 'var(--accent-teal)' },
-                  { label: 'Sequência',value: stats.streak,       sub: 'dias 🔥',     color: 'var(--accent-amber)' },
+                  { label: 'Total',    value: stats.total,          sub: 'memórias', color: 'var(--accent-purple)' },
+                  { label: 'Mês',      value: stats.thisMonth,      sub: 'este mês', color: 'var(--accent-teal)' },
+                  { label: 'Sequência',value: stats.streak,         sub: 'dias 🔥',  color: 'var(--accent-amber)' },
                   { label: 'Mood',     value: stats.topMood ?? '—', sub: 'favorito', color: 'var(--accent-pink)' },
                 ].map(({ label, value, sub, color }) => (
-                  <div key={label} style={{
-                    borderRadius: '12px', padding: '10px 8px', textAlign: 'center',
+                  <div key={label} className="rounded-xl p-3 lg:p-5 text-center" style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border)',
                   }}>
-                    <div style={{ fontSize: typeof value === 'number' ? '20px' : '22px', fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.2 }}>{sub}</div>
+                    <div className="font-bold leading-none mb-1" style={{
+                      fontSize: typeof value === 'number' ? 'clamp(24px, 4vw, 36px)' : 'clamp(28px, 5vw, 42px)',
+                      color,
+                    }}>{value}</div>
+                    <div className="text-[10px] lg:text-[12px]" style={{ color: 'var(--text-muted)', lineHeight: 1.2 }}>{sub}</div>
                   </div>
                 ))}
               </div>

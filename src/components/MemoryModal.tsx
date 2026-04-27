@@ -202,6 +202,7 @@ function PolaroidPhoto({
 // ── Memory Hero ───────────────────────────────
 function MemoryHero({
   mood,
+  title,
   text,
   date,
   endDate,
@@ -216,6 +217,7 @@ function MemoryHero({
   onUpload,
 }: {
   mood: Mood | null;
+  title: string;
   text: string;
   date: Date;
   endDate: string | null;
@@ -323,7 +325,7 @@ function MemoryHero({
         padding: '0 20px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
       }}>
-        {text && (
+        {title && (
           <p style={{
             color: '#fff', fontSize: '22px', fontWeight: 600,
             lineHeight: 1.25, textAlign: 'center',
@@ -332,7 +334,7 @@ function MemoryHero({
             display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center',
           }}>
             {mood && <span style={{ fontSize: '28px', lineHeight: 1, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.6))', flexShrink: 0 }}>{mood}</span>}
-            <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{text}</span>
+            <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{title}</span>
           </p>
         )}
         <span style={{
@@ -447,8 +449,10 @@ interface MemoryModalProps {
 }
 
 export default function MemoryModal({ date, memory, initialEndDate, onClose, onSave, onDelete, deleteLabel }: MemoryModalProps) {
+  const [title, setTitle] = useState(memory?.title ?? '');
   const [text, setText] = useState(memory?.text ?? '');
   const [mood, setMood] = useState<Mood | null>(memory?.mood ?? null);
+  const [dateValue, setDateValue] = useState(format(date, 'yyyy-MM-dd'));
   const [music, setMusic] = useState(
     memory?.music_data
       ? `${memory.music_data.title}${memory.music_data.artist ? ` - ${memory.music_data.artist}` : ''}`
@@ -470,6 +474,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [tagFocused, setTagFocused] = useState(false);
@@ -481,6 +486,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   const [suggestedMusics, setSuggestedMusics] = useState<string[]>([]);
 
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   // Travar scroll do body — apenas mount/unmount, sem dependência de onClose
   useEffect(() => {
@@ -527,7 +533,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
     load();
   }, []);
 
-  useEffect(() => { setTimeout(() => textRef.current?.focus(), 320); }, []);
+  useEffect(() => { setTimeout(() => titleRef.current?.focus(), 320); }, []);
 
   // Busca grupos em que esta memória está
   useEffect(() => {
@@ -651,11 +657,14 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   };
 
   const handleSave = async () => {
-    if (!text.trim()) return;
+    if (!title.trim() && !text.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      await onSave({ text, mood, music, location, people, tags, is_pinned: isPinned, end_date: endDate });
+      await onSave({ title, text, mood, music, location, people, tags, is_pinned: isPinned, end_date: endDate, date: memory ? undefined : dateValue });
       onClose();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -671,6 +680,8 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
   const tagSuggestions = suggestedTags.filter(
     (s) => !tags.includes(s) && s.toLowerCase().includes(tagInput.replace(/^#/, '').toLowerCase())
   ).slice(0, 5);
+
+  const displayText = title.trim() ? title : text;
 
   // Parse música para extrair título/artista
   const musicTitle = music.includes(' - ') ? music.split(' - ')[0] : music;
@@ -703,6 +714,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
         {/* ── Hero ── */}
         <MemoryHero
           mood={mood}
+          title={title}
           text={text}
           date={date}
           endDate={endDate}
@@ -773,6 +785,54 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
                   />
                 </div>
               )}
+            </div>
+          </div>
+
+          <div style={{ ...dividerCss, margin: '20px 0 0' }} />
+
+          {/* ── Data (só em criação nova) ── */}
+          {!memory && (
+            <div style={S}>
+              <label style={labelCss}>Data</label>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: 'var(--bg-card-hover)', border: '1px solid var(--border)',
+                borderRadius: '12px', padding: '10px 14px',
+              }}>
+                <CalendarDays size={15} color="var(--accent-purple)" style={{ flexShrink: 0 }} />
+                <input
+                  type="date"
+                  value={dateValue}
+                  max={format(new Date(), 'yyyy-MM-dd')}
+                  onChange={(e) => e.target.value && setDateValue(e.target.value)}
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    fontSize: '14px', color: 'var(--text-primary)',
+                    colorScheme: 'dark',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {!memory && <div style={{ ...dividerCss, margin: '20px 0 0' }} />}
+
+          {/* ── Título da memória ── */}
+          <div style={S}>
+            <label style={labelCss}>Título</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título da memória..."
+                style={{
+                  width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                  fontSize: '16px', fontWeight: 500, color: 'var(--text-primary)',
+                  paddingBottom: '8px',
+                }}
+                autoComplete="off" autoCorrect="off" spellCheck={false}
+              />
             </div>
           </div>
 
@@ -969,7 +1029,7 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
                     onFocus={() => setTagFocused(true)}
                     onBlur={() => { setTimeout(() => setTagFocused(false), 150); addTag(); }}
                     placeholder="Nova tag"
-                    style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '12px', color: 'var(--text-muted)', width: '64px' }}
+                    style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: '12px', color: 'var(--text-primary)', width: '64px' }}
                     autoComplete="off" autoCorrect="off" spellCheck={false}
                   />
                 </span>
@@ -1062,21 +1122,26 @@ export default function MemoryModal({ date, memory, initialEndDate, onClose, onS
           background: 'linear-gradient(to top, var(--bg-card) 70%, transparent)',
           pointerEvents: 'none',
         }}>
+          {saveError && (
+            <p style={{ fontSize: '12px', color: '#EF4444', textAlign: 'center', marginBottom: '8px', pointerEvents: 'all' }}>
+              {saveError}
+            </p>
+          )}
           <button
             onClick={handleSave}
-            disabled={!text.trim() || saving}
+            disabled={(!title.trim() && !text.trim()) || saving}
             style={{
               pointerEvents: 'all',
               width: '100%', height: '52px',
               borderRadius: '26px',
-              background: !text.trim() || saving ? 'var(--border)' : 'var(--accent-purple)',
+              background: (!title.trim() && !text.trim()) || saving ? 'var(--border)' : 'var(--accent-purple)',
               border: 'none',
-              color: !text.trim() || saving ? 'var(--text-muted)' : '#fff',
+              color: (!title.trim() && !text.trim()) || saving ? 'var(--text-muted)' : '#fff',
               fontSize: '15px', fontWeight: 600,
-              cursor: !text.trim() || saving ? 'not-allowed' : 'pointer',
+              cursor: (!title.trim() && !text.trim()) || saving ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               transition: 'background 200ms, color 200ms',
-              boxShadow: !text.trim() || saving ? 'none' : '0 4px 20px rgba(155,143,255,0.35)',
+              boxShadow: (!title.trim() && !text.trim()) || saving ? 'none' : '0 4px 20px rgba(155,143,255,0.35)',
             }}
           >
             <Bookmark size={17} />

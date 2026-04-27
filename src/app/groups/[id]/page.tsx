@@ -42,50 +42,55 @@ export default function GroupDetailPage() {
     if (!user) { router.push('/login'); return; }
     setUserId(user.id);
 
-    // 1. Dados do grupo
-    const { data: groupData, error: groupError } = await supabase
-      .from('groups').select('*').eq('id', id).single();
-    if (groupError || !groupData) { router.push('/groups'); return; }
+    // 1. Paralelo: dados do grupo + minha participação
+    const [{ data: groupData, error: groupError }, { data: myMembership }] = await Promise.all([
+      supabase.from('groups').select('*').eq('id', id).single(),
+      supabase.from('group_members').select('role').eq('group_id', id).eq('user_id', user.id).single(),
+    ]);
 
-    // 2. Minha participação
-    const { data: myMembership } = await supabase
-      .from('group_members').select('role')
-      .eq('group_id', id).eq('user_id', user.id).single();
+    if (groupError || !groupData) { router.push('/groups'); return; }
     if (!myMembership) { router.push('/groups'); return; }
 
     setGroup(groupData as Group);
     setMyRole(myMembership.role as 'admin' | 'member');
 
-    // 3. Todos os membros + perfis
-    const { data: memberRows } = await supabase
-      .from('group_members')
-      .select('user_id, role, joined_at')
-      .eq('group_id', id)
-      .order('role', { ascending: true })   // admin < member alfabeticamente
-      .order('joined_at', { ascending: true });
+    // 2. Paralelo: membros + memórias do grupo
+    const [{ data: memberRows }, { data: gmRows }] = await Promise.all([
+      supabase
+        .from('group_members')
+        .select('user_id, role, joined_at')
+        .eq('group_id', id)
+        .order('joined_at', { ascending: true })
+        .limit(50),
+      supabase
+        .from('group_memories')
+        .select('id, memory_id, added_by, added_at')
+        .eq('group_id', id)
+        .order('added_at', { ascending: false }),
+    ]);
 
+    // 3. Perfis dos membros
     if (memberRows) {
       const userIds = memberRows.map(m => m.user_id);
       const { data: profiles } = await supabase
         .from('profiles').select('id, display_name, avatar_url, email')
         .in('id', userIds);
       const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
-      setMembers(memberRows.map(m => ({
+      const mapped = memberRows.map(m => ({
         user_id: m.user_id,
         role: m.role as 'admin' | 'member',
         joined_at: m.joined_at ?? new Date().toISOString(),
         display_name: profileMap.get(m.user_id)?.display_name ?? null,
         avatar_url: profileMap.get(m.user_id)?.avatar_url ?? null,
         email: profileMap.get(m.user_id)?.email ?? null,
-      })));
+      }));
+      // Ordenar: admins primeiro, depois por joined_at
+      mapped.sort((a, b) => {
+        if (a.role !== b.role) return a.role === 'admin' ? -1 : 1;
+        return new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime();
+      });
+      setMembers(mapped);
     }
-
-    // 4. Memórias do grupo
-    const { data: gmRows } = await supabase
-      .from('group_memories')
-      .select('id, memory_id, added_by, added_at')
-      .eq('group_id', id)
-      .order('added_at', { ascending: false });
 
     if (gmRows && gmRows.length > 0) {
       const memoryIds = gmRows.map(r => r.memory_id);
@@ -152,6 +157,7 @@ export default function GroupDetailPage() {
     if (mem.user_id !== userId) return;
 
     const { error } = await supabase.from('memories').update({
+      title: formData.title,
       text: formData.text, mood: formData.mood,
       music: formData.music || null, location: formData.location || null,
       is_pinned: formData.is_pinned, end_date: formData.end_date || null,
@@ -355,7 +361,7 @@ export default function GroupDetailPage() {
                 <span style={{ fontSize: '26px', flexShrink: 0 }}>{gm.memory.mood ?? '📝'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
-                    {gm.memory.text}
+                    {gm.memory.title || gm.memory.text}
                   </p>
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 1px', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                     <Clock size={11} />
